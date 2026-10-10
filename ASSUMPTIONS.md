@@ -58,3 +58,57 @@ Every interpretation and default Relay uses, one line each with the reason. Numb
 - **We also accept `agent_heartbeat_restored`, `shift_ended`, `consult_reclassified`, and `consult_cancelled`.** New data may use them; anything else unknown is skipped.
 - **Baseline rows are matched to the scenario day type (weekday for Tuesday 17 March 2026).** Missing hours are reported and skipped for surge checks.
 - **A hospital with no coverage requirement row is assumed to need 1 physician.** Reported as a warning.
+
+## Surge and time standards
+
+- **Surge = distinct consults first received in the trailing 60 minutes, strictly above the p90 for the hour containing "now".** Each hospital is compared with its own normal level.
+- **Re-calls never count as demand.** They do not create a consult.
+- **In projections, a surge is assumed to last until the end of its hour plus 60 minutes.** Suncrest's 6 PM surge is planned through 8:00 PM.
+- **A missing baseline hour means no surge check for that hour.** It is reported in data health.
+- **Status uses exact elapsed time; displayed minutes are floored.** 10 min 55 s is past a 10-minute limit but shows as 10.
+- **The note clock runs from the end of the video or call, across Note Pending and Documentation together.** As the brief says.
+- **General neurology imaging steps have no standard.** The brief lists those standards for stroke only.
+- **"Received, not triaged" shows as information after 5 minutes.** There is no standard for it.
+
+## Routing model
+
+- **The kit's real assignments match the brief's routing rules only about 55% of the time.** The synthetic data does not follow them strictly, so we model the rules as written and do not tune them to the data.
+- **A doctor with a consult assigned but not yet contacted is treated as having a phone about to ring.** This reproduces all 4 recorded routing failures; without it, routing would have sent CON-2105 to Dr. Williams at 6:09 PM.
+- **The 2-minute cooldown applies to phone calls only.** The brief says "ended a call".
+- **Rule 2 also removes Temporarily Unavailable doctors and "camera on, no Synapse session" doctors.** Both are not free by the availability rules.
+- **No answered call yet counts as least recent for ties.** Rule 4 says ties go to whoever answered least recently.
+
+## Coverage
+
+- **Staffed = on shift, credentialed, and not Temporarily Unavailable. A status is assumed to last until it changes.** We do not guess when someone comes back.
+- **Scheduled roster shifts count from their start.** Dr. Cho joins at 7:00 PM and Dr. Haddad at 8:00 PM.
+- **A "nobody free now" gap exists when a hospital has a waiting consult and no credentialed doctor that routing could use.** Waiting means unassigned and not ringing, or assigned to an unavailable doctor.
+- **A "nobody free now" gap is planned for at least 60 minutes, or until the surge is expected to end.** We cannot know when a busy doctor will really be free.
+- **The projection runs every 15 minutes to the latest of now + 90 minutes, 9:30 PM, and now + 3 hours, and also checks every exact shift change.** It covers the 7, 8, and 9 PM shift changes.
+
+## Ranking and plans
+
+- **Order: stroke first, then critical, warning, projected, info; then nobody working on it, a delayed doctor, a hospital-side delay; then re-calls; then longer wait.** Fixed and explainable.
+- **Harbor (CON-2110) ranks above Oak Valley (CON-2105).** Both are critical stroke consults with nobody working on them; Harbor's patient has waited 16 minutes and Oak Valley's 12. A re-call at Oak Valley moves it to the top.
+- **A re-call turns a warning into critical and moves the consult up.** The handbook says it should move up the list.
+- **Plans are made in rank order.** The most urgent issue gets first claim on a scarce doctor.
+- **Never interrupt a stroke call or video.** The mentor said someone on an emergency case is priority 1.
+- **"Wait for the assigned doctor" is offered only when they should be free within 10 minutes.** Otherwise it is not a plan.
+- **Free-in estimate: the doctor's own median call or video length if they have 3 or more today, otherwise the team median. Over twice the typical length is a long case with no estimate.**
+- **Asking a scheduled doctor to start early is limited to 60 minutes before their shift.** More than that is an extra shift and goes through the split-shift rules. Rest and weekly hours are still checked.
+- **A critical stroke consult whose fix is not immediate is also escalated to the clinical lead.**
+- **Imaging pending past its limit is a hospital-side delay; the fix is to call the hospital, not to change doctors.**
+- **Imaging back, video not started, and the assigned doctor free means a possible technology problem at the hospital.**
+
+## Split-shift offers
+
+- **Offer start = the later of the gap start and now + time to get online. The doctor is expected online at the start.**
+- **Offer end covers the gap, then stretches to later gaps at hospitals the doctor is credentialed at (combined coverage).** Okafor's offer reaches 10:00 PM so it also covers Northfield's 8:00 PM gap.
+- **Offers last at least 2 hours after time to get online and at most 4 hours, trimmed to fit the 60-hour rule and the next shift.**
+- **Value rule: offer length minus time to get online must be at least 120 minutes.** The handbook's example confirms this reading.
+- **The weekly-hours rule fails if even the shortest workable offer would pass 60 hours.** Exactly 60 passes ("do not exceed").
+- **Rest is measured at the offered start.** Exactly 10 hours passes ("at least").
+- **Being already scheduled to work during the offer counts as an overlap.**
+- **The top recommendation targets the "nobody free now" gaps; each later projected gap gets its own eligibility table.**
+- **Eligible doctors are ranked by gap hospitals covered, then time to get online, then fewer hours this week, fewer offers this week, fewer recent declines.** Never cost, as Sevaro asked.
+- **Offers this week start at 0.** The kit has no offer history; Relay keeps its own.

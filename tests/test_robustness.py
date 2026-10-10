@@ -169,3 +169,16 @@ def test_engine_has_no_hardcoded_ids_or_times(transformed_kit, cfg):
     torres = w.physicians[mapping["PHY-007"]]
     assert torres.shift.end.day == torres.shift.start.day + 1
     assert mapping["SYN-005"] in ds.ref.credentials[mapping["PHY-007"]]
+
+
+def test_analysis_has_no_hardcoded_ids_or_times(transformed_kit, cfg):
+    from engine.analysis import analyze
+
+    kit, mapping = transformed_kit
+    ds = Dataset(cfg.with_overrides({"clock": {"default_now": "21:20:00"}}), kit)
+    an = analyze(ds, replay(ds, ds.default_now()))
+    assert [r.physician_id for r in an.cluster.eligible] == [mapping["PHY-009"]]
+    assert an.surges[mapping["SYN-005"]].active
+    northfield = [g for g in an.gaps if g.hospital_id == mapping["SYN-008"]]
+    assert northfield and northfield[0].start.strftime("%H:%M") == "23:00"
+    assert {g.key for g in an.groups[:2]} == {mapping["SYN-011"], mapping["SYN-010"]}

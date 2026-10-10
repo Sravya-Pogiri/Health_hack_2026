@@ -44,6 +44,7 @@ routing:                            # brief: synthetic routing rules
   low_volume_day: 6
   low_volume_night: 4
   retry_minutes: 5
+  pending_contact_blocks: true      # assumption: assigned, not yet contacted = phone about to ring (matches all 4 kit routing failures)
 
 demand:
   trailing_window_minutes: 60       # brief: trailing 60-minute consults
@@ -55,6 +56,8 @@ coverage:
   projection_min_minutes: 90        # brief: project at least 90 minutes ahead
   projection_extend_to: "21:30"     # assumption: also cover the evening shift changes
   projection_extend_min_hours: 3
+  gap_end_lookahead_hours: 6        # look past the horizon only to find where an open gap ends
+  now_gap_minutes: 60               # assumption: a "nobody free now" gap is planned for at least this long
 
 split_shift:                        # brief: split-shift eligibility
   min_rest_hours: 10
@@ -65,6 +68,13 @@ split_shift:                        # brief: split-shift eligibility
   max_open_offers: 1
   no_show_grace_minutes: 10         # assumption
   backup_approver_minutes: 5        # assumption
+  max_offer_hours: 4                # assumption: offers cover the gap, but no longer than this
+  near_term_minutes: 90             # brief: decide for what needs attention in the next 60 to 90 minutes
+  extend_for_later_gaps_minutes: 60 # combined coverage: stretch an offer to a later gap starting within this time of its end
+
+interventions:
+  start_early_max_minutes: 60       # assumption: asking for more than an hour early is an extra shift; use split-shift rules
+  interrupt_note_cost_minutes: 5    # task-switching cost added to an interrupted note
 
 flood_guard:
   enabled: true

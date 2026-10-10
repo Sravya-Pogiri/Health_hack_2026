@@ -68,3 +68,18 @@ def floor_to_hour(dt: datetime) -> datetime:
 
 def add_minutes(dt: datetime, minutes: float) -> datetime:
     return dt + timedelta(minutes=minutes)
+
+
+def join_names(names: list[str]) -> str:
+    names = list(names)
+    if len(names) <= 1:
+        return "".join(names)
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def fmt_day_clock(dt: datetime, ref: datetime) -> str:
+    """6:20 PM, with the date added when it is not the same day as ref."""
+    local, base = dt.astimezone(ET), ref.astimezone(ET)
+    if local.date() == base.date():
+        return fmt_clock(dt)
+    return f"{local.strftime('%b')} {local.day} {fmt_clock(dt)}"

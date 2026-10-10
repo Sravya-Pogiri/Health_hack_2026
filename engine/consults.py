@@ -75,6 +75,7 @@ class ConsultState:
     phone_only: bool = False
     call_active: bool = False
     last_call_end_at: datetime | None = None
+    call_times: list[tuple[datetime, str]] = field(default_factory=list)
     recall_times: list[datetime] = field(default_factory=list)
     routing_failures: list[datetime] = field(default_factory=list)
     ringing_to: str | None = None
@@ -155,6 +156,7 @@ def apply_consult_event(consults: dict[str, ConsultState], ev: Event, aliases: d
             c.implicit_assignment = True
         c.ringing_to = c.ringing_since = None
         c.call_active = True
+        c.call_times.append((t, "incoming" if etype.startswith("incoming") else "outgoing"))
         c.contacted_at = c.contacted_at or t
         if c.physician_id:
             c.advance("Provider Contacted", t)

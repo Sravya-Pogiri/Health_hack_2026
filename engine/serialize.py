@@ -122,14 +122,88 @@ def data_health_json(ds: Dataset, world: World) -> dict:
     }
 
 
-def state_json(ds: Dataset, world: World) -> dict:
-    """Milestone 1 subset of GET /api/state. Issues, coverage, and offers are added in later milestones."""
+def load_json(world: World, p: PhysicianState, cfg) -> dict:
+    """Load meter: consults this shift against the team average and a soft sustainable limit."""
+    on = [q.consults_this_shift for q in world.physicians.values() if q.on_shift]
+    avg = sum(on) / len(on) if on else 0
+    limit = int(cfg.get_path("load.soft_consult_limit", 15))
+    n = p.consults_this_shift
+    level = ("at or over the soft limit" if n >= limit else "above team average" if avg and n > avg * 1.15 else
+             "below team average" if avg and n < avg * 0.6 else "typical")
+    return {"consults": n, "team_average": round(avg, 1), "soft_limit": limit, "level": level}
+
+
+def hospital_json(ds: Dataset, an, hid: str) -> dict:
+    h = ds.ref.hospitals[hid]
+    cov = an.coverage_now[hid]
+    nu = an.next_up.get(hid)
+    surge = an.surges[hid]
+    return {
+        "id": hid, "name": h.name, "tier": h.tier, "timezone": h.timezone,
+        "local_time": hospital_local_time(ds, hid, an.world.now),
+        "required_now": cov["required"], "base_required": cov["base_required"],
+        "staffed_now": len(cov["staffed"]), "staffed_ids": cov["staffed"],
+        "free_now": len(cov["free"]), "free_ids": cov["free"],
+        "unavailable_ids": cov["unavailable"], "waiting_consults": cov["waiting"],
+        "surge": {**surge.to_dict(), "until": iso(an.surge_until.get(hid))},
+        "next_up": {"physician_id": nu.chosen, "name": nu.chosen_name, "reason": nu.reason} if nu else None,
+        "promise_at_risk": bool(nu and not nu.chosen),
+        "next_change": an.next_change.get(hid, ""),
+        "gap_ids": [g.id for g in an.all_gaps if g.hospital_id == hid],
+    }
+
+
+def analysis_json(ds: Dataset, an) -> dict:
+    """GET /api/state: everything the three role views need."""
+    world = an.world
+    names = {h.id: h.name for h in ds.ref.hospitals.values()}
+    physicians = []
+    for p in sorted(world.physicians.values(), key=lambda p: p.id):
+        item = physician_json(ds, world, p)
+        fi = an.free_in.get(p.id)
+        item["free_in_minutes"] = fi.minutes if fi else None
+        item["free_in_basis"] = fi.basis if fi else None
+        item["long_case"] = bool(fi and fi.long_case)
+        item["load"] = load_json(world, p, ds.cfg) if p.on_shift else None
+        notes = an.open_notes.get(p.id)
+        item["open_notes_near_shift_end"] = ({"status": notes.status, "consult_ids": notes.consult_ids}
+                                             if notes else None)
+        physicians.append(item)
+    consults = []
+    for c in sorted(world.consults.values(), key=lambda c: c.consult_id):
+        if not c.is_open:
+            continue
+        item = consult_json(ds, world, c)
+        chk = an.standards.get(c.consult_id)
+        item["standard"] = chk.to_dict() if chk else None
+        consults.append(item)
+    groups = [g.to_dict() for g in an.groups]
+    flat = [i for g in groups for i in g["issues"]]
     return {
         "now": iso(world.now),
         "now_label": f"{fmt_clock(world.now)} ET",
         "scenario_date": ds.ref.scenario_date.isoformat() if ds.ref.scenario_date else None,
-        "physicians": [physician_json(ds, world, p) for p in sorted(world.physicians.values(), key=lambda p: p.id)],
-        "consults": [consult_json(ds, world, c) for c in sorted(world.consults.values(), key=lambda c: c.consult_id)
-                     if c.is_open],
+        "physicians": physicians,
+        "consults": consults,
+        "hospitals": [hospital_json(ds, an, hid) for hid in sorted(ds.ref.hospitals)],
+        "issues": groups,
+        "gaps": [g.to_dict(names) for g in an.all_gaps],
+        "projection": {"times": an.projection["times"], "horizon": an.projection["horizon"],
+                       "hospitals": an.projection["hospitals"]},
+        "eligibility": {
+            "now": an.cluster.to_dict(names) if an.cluster else None,
+            "by_gap": {gid: r.to_dict(names) for gid, r in an.gap_eligibility.items()},
+        },
         "data_health": data_health_json(ds, world),
+        "summary": {
+            "critical": sum(1 for i in flat if i["severity"] == "critical"),
+            "warning": sum(1 for i in flat if i["severity"] == "warning"),
+            "projected": sum(1 for i in flat if i["severity"] == "projected"),
+            "stroke_critical": sum(1 for i in flat if i["severity"] == "critical" and i["stroke"]),
+        },
     }
+
+
+def state_json(ds: Dataset, world: World) -> dict:
+    from .analysis import analyze
+    return analysis_json(ds, analyze(ds, world))

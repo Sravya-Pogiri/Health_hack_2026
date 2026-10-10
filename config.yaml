@@ -1,0 +1,83 @@
+# Relay configuration. Every threshold the engine uses lives here.
+# Values marked "brief" come from the Sevaro Challenge 2 brief or handbook.
+# Values marked "assumption" are our defaults; each one is explained in ASSUMPTIONS.md.
+
+data:
+  kit_dir: data/kit                 # original developer kit files (never modified)
+  uploads_dir: data/uploads         # appended event files (local mode)
+  internal_timezone: America/New_York
+
+clock:
+  default_now: "18:20:00"           # brief: "now" for the kit data, Eastern time, on the scenario date
+  now_after_append: latest_ingested # after an upload, now = latest ingested_at across all events
+
+shifts:
+  default_shift_hours: 12           # assumption: roster shifts have no end time in the kit
+  night_shift_hours: 12             # assumption: night shift length is not given
+  night_start_hour: 19              # assumption: a shift starting at or after 19:00 ET counts as a night shift
+
+events:
+  late_threshold_seconds: 60        # assumption: ingested more than 60 s after it happened = late
+  ringing_timeout_minutes: 3        # assumption: an unanswered ring older than this is a missed call
+  # Extra event types we accept beyond the brief's list (for robustness with new data).
+  extension_types:
+    - agent_heartbeat_restored
+    - shift_ended
+    - consult_reclassified
+    - consult_cancelled
+
+standards:                          # brief: operational standards (minutes)
+  triaged_unassigned:   {applies_to: all,           warning: 5,  critical: 10}
+  assigned_not_contacted: {applies_to: stroke,      warning: 3,  critical: 8}
+  imaging_pending:      {applies_to: stroke,        warning: 12, critical: 20}
+  imaging_review:       {applies_to: stroke,        warning: 6,  critical: 12}
+  note_stroke:          {applies_to: stroke,        warning: 30, critical: 45}
+  note_general:         {applies_to: general,       warning: 45, critical: 90}
+  open_notes_near_shift_end:
+    window_minutes: 60
+    warning_count: 1
+    critical_count: 2
+  received_not_triaged_info_minutes: 5   # assumption: no standard exists; shown as info only
+
+routing:                            # brief: synthetic routing rules
+  cooldown_minutes: 2
+  low_volume_day: 6
+  low_volume_night: 4
+  retry_minutes: 5
+
+demand:
+  trailing_window_minutes: 60       # brief: trailing 60-minute consults
+  surge_extra_required: 1           # brief: a surge raises the requirement by one
+  surge_hold_minutes: 60            # assumption: a surge is assumed to persist this long in projections
+
+coverage:
+  projection_step_minutes: 15
+  projection_min_minutes: 90        # brief: project at least 90 minutes ahead
+  projection_extend_to: "21:30"     # assumption: also cover the evening shift changes
+  projection_extend_min_hours: 3
+
+split_shift:                        # brief: split-shift eligibility
+  min_rest_hours: 10
+  max_week_hours: 60
+  min_effective_minutes: 120
+  offer_expiry_minutes: 10
+  max_offers_per_week: 3
+  max_open_offers: 1
+  no_show_grace_minutes: 10         # assumption
+  backup_approver_minutes: 5        # assumption
+
+flood_guard:
+  enabled: true
+  limit_to_gap_hospitals: true
+  seed_with_median_consults: true
+
+simulation:
+  runs: 50
+  seed: 17
+
+alerts:
+  coordinator_ack_minutes: 3        # assumption: unacknowledged critical issue goes to the clinical lead
+  stale_data_minutes: 10            # assumption: no new records for this long = stale banner
+
+load:
+  soft_consult_limit: 15            # assumption: telestroke doctors report 13 to 15 per shift as sustainable

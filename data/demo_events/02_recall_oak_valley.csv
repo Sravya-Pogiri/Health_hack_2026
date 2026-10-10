@@ -1,0 +1,3 @@
+event_id,event_time,ingested_at,consult_id,event_type,physician_id,hospital_id,description
+DEMO-0201,2026-03-17T18:24:10-04:00,2026-03-17T18:24:13-04:00,CON-2105,routing_attempt_failed,,SYN-010,No available credentialed provider; retry scheduled
+DEMO-0202,2026-03-17T18:26:00-04:00,2026-03-17T18:26:02-04:00,CON-2105,consult_received,,SYN-010,Stroke consult request received; hospital calling again

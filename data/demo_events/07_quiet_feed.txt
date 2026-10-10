@@ -1,0 +1,1 @@
+One last record at 7:12 PM, then nothing. Press +10 twice: the stale-data banner appears and the feed-quiet alert fires.

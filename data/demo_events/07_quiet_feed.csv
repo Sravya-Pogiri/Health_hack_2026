@@ -1,0 +1,2 @@
+event_id,event_time,ingested_at,consult_id,event_type,physician_id,hospital_id,description
+DEMO-0701,2026-03-17T19:12:00-04:00,2026-03-17T19:12:02-04:00,,camera_inactive,PHY-001,,Desktop agent: camera inactive

@@ -1,0 +1,7 @@
+event_id,event_time,ingested_at,consult_id,event_type,physician_id,hospital_id,description
+DEMO-0601,2026-03-17T19:00:00-04:00,2026-03-17T19:00:02-04:00,,shift_started,PHY-011,,Shift started
+DEMO-0602,2026-03-17T19:00:30-04:00,2026-03-17T19:00:31-04:00,,physician_status_changed,PHY-011,,Self-reported status: Available
+DEMO-0603,2026-03-17T19:04:00-04:00,2026-03-17T19:04:02-04:00,CON-2121,consult_received,,SYN-004,General Neuro consult request received
+DEMO-0604,2026-03-17T19:05:30-04:00,2026-03-17T19:05:33-04:00,CON-2121,consult_triaged,,SYN-004,Consult triaged
+DEMO-0605,2026-03-17T19:06:00-04:00,2026-03-17T19:06:02-04:00,CON-2122,consult_received,,SYN-008,Stroke consult request received
+DEMO-0606,2026-03-17T19:07:00-04:00,2026-03-17T19:07:03-04:00,CON-2122,consult_triaged,,SYN-008,Consult triaged

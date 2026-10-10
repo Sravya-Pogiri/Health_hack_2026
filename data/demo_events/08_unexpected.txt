@@ -1,0 +1,1 @@
+Things we did not plan for: a surge at Westbridge, a consult with no received event, an unknown event type, a bad timestamp, an unknown doctor and an unknown hospital. Relay keeps going and reports each one.

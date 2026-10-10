@@ -1,0 +1,9 @@
+event_id,event_time,ingested_at,consult_id,event_type,physician_id,hospital_id,description
+DEMO-0801,2026-03-17T19:14:00-04:00,2026-03-17T19:14:02-04:00,CON-2123,consult_received,,SYN-012,General Neuro consult request received
+DEMO-0802,2026-03-17T19:16:00-04:00,2026-03-17T19:16:02-04:00,CON-2124,consult_received,,SYN-012,General Neuro consult request received
+DEMO-0803,2026-03-17T19:18:00-04:00,2026-03-17T19:18:02-04:00,CON-2125,consult_received,,SYN-012,Stroke consult request received
+DEMO-0804,2026-03-17T19:18:30-04:00,2026-03-17T19:18:31-04:00,CON-3001,note_started,PHY-004,SYN-003,Documentation begins
+DEMO-0805,2026-03-17T19:19:00-04:00,2026-03-17T19:19:01-04:00,CON-2126,teleport_started,PHY-004,SYN-003,Unknown event type
+DEMO-0806,not-a-time,2026-03-17T19:19:05-04:00,CON-2126,consult_triaged,,SYN-003,Consult triaged
+DEMO-0807,2026-03-17T19:19:30-04:00,2026-03-17T19:19:31-04:00,,camera_active,PHY-099,,Desktop agent: camera active
+DEMO-0808,2026-03-17T19:20:00-04:00,2026-03-17T19:20:02-04:00,CON-2127,consult_received,,SYN-013,Stroke consult request received

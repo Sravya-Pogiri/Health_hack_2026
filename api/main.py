@@ -179,6 +179,27 @@ def add_event(body: dict = Body(...)):
     return svc().add_event(body)
 
 
+DEMO_DIR = REPO_ROOT / "data" / "demo_events"
+
+
+@app.get("/api/demo-events")
+def demo_events():
+    """Practice files for the live test. The first comment line of each file describes it."""
+    out = []
+    for p in sorted(DEMO_DIR.glob("*.csv")):
+        desc = (DEMO_DIR / (p.stem + ".txt"))
+        out.append({"name": p.name, "description": desc.read_text().strip() if desc.exists() else ""})
+    return out
+
+
+@app.post("/api/demo-events/{name}")
+def load_demo_event(name: str):
+    path = (DEMO_DIR / name).resolve()
+    if DEMO_DIR.resolve() not in path.parents or not path.is_file():
+        raise HTTPException(404, "No such practice file.")
+    return svc().upload(path.read_text(encoding="utf-8-sig"), name)
+
+
 @app.post("/api/reset")
 def reset():
     svc().reset()

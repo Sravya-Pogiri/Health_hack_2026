@@ -1,0 +1,7 @@
+event_id,event_time,ingested_at,consult_id,event_type,physician_id,hospital_id,description
+DEMO-0401,2026-03-17T18:21:00-04:00,2026-03-17T18:28:40-04:00,CON-2108,note_signed,PHY-004,SYN-003,Note signed; consult signed off
+DEMO-0402,2026-03-17T18:22:30-04:00,2026-03-17T18:28:50-04:00,CON-2101,video_ended,PHY-002,SYN-008,Video consult completed
+DEMO-0403,2026-03-17T18:22:33-04:00,2026-03-17T18:28:51-04:00,,camera_inactive,PHY-002,,Desktop agent: camera inactive
+EVT-01163,2026-03-17T18:19:40-04:00,2026-03-17T18:19:43-04:00,CON-2109,incoming_call_ringing,PHY-007,SYN-012,Hospital call ringing to intended physician; not yet answered
+DEMO-0404,2026-03-17T18:19:10-04:00,2026-03-17T18:19:14-04:00,CON-2105,routing_attempt_failed,,SYN-010,No available credentialed provider; retry scheduled
+DEMO-0402,2026-03-17T18:22:30-04:00,2026-03-17T18:28:55-04:00,CON-2101,video_ended,PHY-002,SYN-008,Video consult completed

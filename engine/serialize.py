@@ -42,6 +42,9 @@ def physician_json(ds: Dataset, world: World, p: PhysicianState) -> dict:
         if hosp:
             parts.append(hosp.name)
         activity_text = ", ".join(parts)
+    elif p.ringing:
+        hosp = hospitals.get(p.ringing.get("hospital_id") or "")
+        activity_text = ", ".join(x for x in ["Phone ringing", p.ringing.get("consult_id"), hosp.name if hosp else ""] if x)
     elif p.derived_state in PLAIN_STATES:
         activity_text = PLAIN_STATES[p.derived_state]
     return {

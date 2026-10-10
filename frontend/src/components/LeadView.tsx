@@ -71,6 +71,7 @@ function Pulse({ state, issues }: any) {
 function Approval({ plan, state, act, issues }: any) {
   const [showTable, setShowTable] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [showAlts, setShowAlts] = useState(false);
   const best = plan.candidates[0];
   const rows = plan.eligibility?.rows || [];
   const eligible = rows.filter((r: any) => r.eligible).length;
@@ -80,6 +81,11 @@ function Approval({ plan, state, act, issues }: any) {
   const waited = minutesBetween(plan.proposed_at, state.now);
   const [start, end] = best.window_label.replace(" ET", "").split(" to ");
   const isEarly = plan.kind === "start_early";
+  // The reasoning: why this doctor (fatigue and fairness rules, with numbers) and why not a smaller fix.
+  const chosen = rows.find((r: any) => r.physician_id === best.physician_id);
+  const checks = (chosen?.rules || []).filter((r: any) => ["rest", "week_hours", "weekly_offers", "no_overlap"].includes(r.key));
+  const alts = (reasons.find((i: any) => i.what_to_do?.alternatives?.length)?.what_to_do.alternatives || [])
+    .filter((a: any) => a.why_not && a.kind !== "incoming_join");
 
   return (
     <div className="approval lead-approval">
@@ -123,6 +129,28 @@ function Approval({ plan, state, act, issues }: any) {
         </div>
       )}
 
+      {checks.length > 0 && (
+        <div className="why-now">
+          <div className="muted small">Why {best.name}</div>
+          <ul className="checks">
+            {checks.map((r: any) => <li key={r.key}><span className="pass">Pass</span> {r.reason}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {alts.length > 0 && (
+        <div className="why-now">
+          <button className="btn ghost small alt-toggle" onClick={() => setShowAlts(!showAlts)} aria-expanded={showAlts}>
+            {showAlts ? "Hide" : "Why not a smaller fix?"} ({alts.length} ruled out)
+          </button>
+          {showAlts && (
+            <ul>
+              {alts.map((a: any) => <li key={a.kind}><b>{ALT_LABEL[a.kind] || a.label}</b>: {a.why_not}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
+
       {showTable && <EligibilityTable e={plan.eligibility} />}
 
       <div className="muted small">
@@ -143,6 +171,14 @@ function Approval({ plan, state, act, issues }: any) {
     </div>
   );
 }
+
+const ALT_LABEL: Record<string, string> = {
+  reassign: "Reassign to a doctor on shift",
+  wait: "Wait for the assigned doctor",
+  interrupt: "Pull someone off lower-priority work",
+  start_early: "Ask a scheduled doctor to start early",
+  split_shift: "Split-shift offer",
+};
 
 const REJECT_REASONS = ["Not needed yet", "Prefer a different fix", "Handle by escalation instead"];
 

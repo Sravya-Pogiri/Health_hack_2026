@@ -272,3 +272,6 @@ input.i, select.i, textarea.i { width: 100%; padding: 7px 9px; border: 1px solid
   .risk-where { grid-column: 1 / -1; }
   .risk-detail { padding-left: 14px; }
 }
+.why-now ul.checks { list-style: none; padding-left: 0; }
+.why-now ul.checks .pass { font-size: 12px; margin-right: 6px; }
+.alt-toggle { padding-left: 0; }

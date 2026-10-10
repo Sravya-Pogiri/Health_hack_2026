@@ -275,3 +275,39 @@ input.i, select.i, textarea.i { width: 100%; padding: 7px 9px; border: 1px solid
 .why-now ul.checks { list-style: none; padding-left: 0; }
 .why-now ul.checks .pass { font-size: 12px; margin-right: 6px; }
 .alt-toggle { padding-left: 0; }
+
+/* Audit log */
+.audit { max-width: 1040px; margin: 0 auto; }
+.audit-intro { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.record { border-left: 5px solid var(--line); }
+.record .record-hosp { margin: -8px 0 12px; }
+.record-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 860px) { .record-grid { grid-template-columns: 1fr; } }
+.timeline { list-style: none; margin: 6px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 8px; }
+.tl { position: relative; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; line-height: 1.4; }
+.tl::before { content: ""; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--faint); }
+.tl.good::before { border-color: var(--ok); background: var(--ok); }
+.tl.bad::before { border-color: var(--critical); }
+.tl-time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.considered { margin-top: 4px; }
+.considered td { padding: 5px 6px; }
+.sent-msg { margin-top: 14px; }
+.sent-msg blockquote { margin: 6px 0 0; padding: 10px 12px; background: var(--bg); border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0; line-height: 1.45; }
+.audit-filters { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.activity { display: grid; }
+.act-row { display: grid; grid-template-columns: 44px 92px 150px minmax(0, 1fr); gap: 10px; align-items: baseline; text-align: left;
+  padding: 8px 12px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); }
+.act-row:hover { background: var(--bg); }
+.act-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.act-seq { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.act-time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.act-who { font-weight: 600; font-size: 13px; }
+.act-who.who-coord { color: var(--projected); } .act-who.who-lead { color: var(--accent); }
+.act-who.who-sys { color: var(--muted); } .act-who.who-doc { color: var(--ok); }
+.act-raw { margin: 0; padding: 10px 12px 10px 66px; background: var(--bg); font-size: 12px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+@media (max-width: 700px) {
+  .act-row { grid-template-columns: 44px minmax(0, 1fr); }
+  .act-who, .act-text { grid-column: 2; }
+}

@@ -22,6 +22,7 @@ class PlannedJoin:
     end: datetime
     hospitals: set[str] | None      # flood guard limit; None means every credentialed hospital
     label: str
+    kind: str = "split_shift"       # or "start_early"
 
 
 @dataclass
@@ -83,7 +84,8 @@ def staffed_at(ds, world: World, hospital_id: str, t: datetime,
     for p in world.physicians.values():
         if hospital_id not in ds.ref.credentials.get(p.id, set()):
             continue
-        on = p.window_at(t) is not None
+        w = p.window_at(t)
+        on = w is not None and (w.hospitals is None or hospital_id in w.hospitals)
         joined = any(j.physician_id == p.id and j.online_at <= t < j.end
                      and (j.hospitals is None or hospital_id in j.hospitals) for j in joins)
         if not (on or joined):

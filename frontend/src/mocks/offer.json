@@ -1,0 +1,45 @@
+{
+  "id": "off-0001",
+  "plan_id": "plan-0001",
+  "physician_id": "PHY-009",
+  "physician_name": "Dr. Grace Okafor",
+  "rank": 1,
+  "hospitals": [
+    {
+      "id": "SYN-005",
+      "name": "Suncrest Medical Pavilion"
+    },
+    {
+      "id": "SYN-008",
+      "name": "Northfield Medical"
+    },
+    {
+      "id": "SYN-010",
+      "name": "Oak Valley Medical"
+    }
+  ],
+  "start": "2026-03-17T18:35:00-04:00",
+  "end": "2026-03-17T22:00:00-04:00",
+  "window_label": "6:35 PM to 10:00 PM ET",
+  "minutes_to_online": 15,
+  "channel": "app_push",
+  "channel_label": "app notification",
+  "status": "sent",
+  "message": "Sevaro coverage request: Suncrest Medical Pavilion, Northfield Medical, and Oak Valley Medical, 6:35 PM to 10:00 PM Eastern. Reason: coverage gap now. You were asked because you are credentialed at all three hospitals, fully rested and can be online quickly. Please reply by 6:30 PM.",
+  "sent_at": "2026-03-17T18:20:00-04:00",
+  "expires_at": "2026-03-17T18:30:00-04:00",
+  "seconds_left": 600,
+  "responded_at": null,
+  "online_at": null,
+  "online_confirmed_at": null,
+  "no_show": false,
+  "kind": "split_shift",
+  "history": [
+    {
+      "at": "2026-03-17T18:20:00-04:00",
+      "status": "sent",
+      "by": "Dr. Lead (demo)",
+      "note": ""
+    }
+  ]
+}

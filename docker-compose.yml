@@ -1,0 +1,15 @@
+# Local run with one command: docker compose up --build
+# Open http://localhost:8080 . No AWS needed; the demo never depends on the cloud being up.
+services:
+  relay:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      RELAY_ENV: local
+      RELAY_TICKER: "1"
+      RELAY_TICK_SECONDS: "15"
+    volumes:
+      - relay-state:/app/data/state
+volumes:
+  relay-state:

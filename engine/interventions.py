@@ -69,6 +69,7 @@ class Context:
     world: object
     free_in: dict                   # physician_id -> FreeIn
     cluster: EligibilityResult | None
+    joins: list = field(default_factory=list)       # accepted offers and agreed early starts
     claimed: set[str] = field(default_factory=set)
     joiner_claims: dict[str, str] = field(default_factory=dict)   # physician_id -> consult or hospital it was planned for
 
@@ -172,6 +173,23 @@ def opt_interrupt(ctx: Context, need: Need) -> Option:
                   warnings=[f"Adds about {cost} minutes to {other.consult_id}."])
 
 
+def opt_incoming_join(ctx: Context, need: Need) -> Option:
+    """A doctor who already agreed to join (accepted offer or early start) and covers this hospital."""
+    now = ctx.world.now
+    for j in sorted(ctx.joins, key=lambda j: j.online_at):
+        covers = (j.hospitals is None and ctx.credentialed(j.physician_id, need.hospital_id)) or \
+                 (j.hospitals is not None and need.hospital_id in j.hospitals)
+        if covers and j.online_at > now and j.end > now:
+            eta = int(-(-(j.online_at - now).total_seconds() // 60))
+            return Option("incoming_join", f"{ctx.name(j.physician_id)} joins at {fmt_clock(j.online_at)} and can take it",
+                          True, "none", j.physician_id, eta,
+                          why=(f"{ctx.name(j.physician_id)} already agreed to cover {ctx.hospital(need.hospital_id)} "
+                               f"from {fmt_clock(j.online_at)}. The flood guard keeps new calls to the hospitals they "
+                               "joined for."), detail={"offer_id": j.label})
+    return Option("incoming_join", "A doctor already joining", False,
+                  why_not="No accepted offer or early start covers this hospital yet.")
+
+
 def opt_start_early(ctx: Context, need: Need) -> Option:
     now = ctx.world.now
     max_early = timedelta(minutes=float(ctx.ds.cfg.get_path("interventions.start_early_max_minutes", 60)))
@@ -258,8 +276,8 @@ def opt_escalate_lead(ctx: Context, need: Need) -> Option:
 
 
 def plan_for(ctx: Context, need: Need) -> Plan:
-    ladder = [opt_reassign(ctx, need), opt_wait(ctx, need), opt_interrupt(ctx, need), opt_start_early(ctx, need),
-              opt_split_shift(ctx, need)]
+    ladder = [opt_reassign(ctx, need), opt_wait(ctx, need), opt_interrupt(ctx, need), opt_incoming_join(ctx, need),
+              opt_start_early(ctx, need), opt_split_shift(ctx, need)]
     viable = [o for o in ladder if o.viable]
     alternatives = [o for o in ladder if not o.viable]
     escalate = opt_escalate_lead(ctx, need)

@@ -122,7 +122,7 @@ class PhysicianState:
 def init_physician_states(physicians: dict[str, Physician]) -> dict[str, PhysicianState]:
     states = {}
     for pid, info in physicians.items():
-        states[pid] = PhysicianState(pid, info.name, windows=[ShiftWindow(w.start, w.end, w.kind)
+        states[pid] = PhysicianState(pid, info.name, windows=[ShiftWindow(w.start, w.end, w.kind, w.hospitals, w.source)
                                                               for w in info.scheduled_shifts])
     return states
 

@@ -1,0 +1,190 @@
+{
+  "start": "2026-03-17T18:20:00-04:00",
+  "end": "2026-03-17T20:20:00-04:00",
+  "minutes": 120,
+  "runs": 50,
+  "seed": 17,
+  "service_minutes": 16.8,
+  "assumptions": [
+    "Arrivals follow each hospital's baseline mean for the hour, raised to the current rate while a surge lasts.",
+    "Each call keeps a doctor busy about 17 minutes (today's average time on calls and video per consult), plus the 2-minute cooldown.",
+    "A call nobody can take retries every 5 minutes, as routing rule 5 says.",
+    "Busy doctors free up at their estimated time; this is an estimate, not a forecast."
+  ],
+  "joiners": [
+    {
+      "physician_id": "PHY-009",
+      "name": "Dr. Grace Okafor",
+      "joins_at": "2026-03-17T18:35:00-04:00",
+      "kind": "split shift",
+      "gap_hospitals": [
+        "SYN-005",
+        "SYN-008",
+        "SYN-010"
+      ],
+      "without": {
+        "calls": 4.3,
+        "by_hospital": {
+          "SYN-004": 0.34,
+          "SYN-005": 2.98,
+          "SYN-008": 0.7,
+          "SYN-010": 0.32
+        },
+        "hospital_count": 4
+      },
+      "with": {
+        "calls": 3.9,
+        "by_hospital": {
+          "SYN-005": 3.24,
+          "SYN-008": 0.38,
+          "SYN-010": 0.3
+        },
+        "hospital_count": 3,
+        "calls_outside_gap_hospitals": 0
+      }
+    },
+    {
+      "physician_id": "PHY-011",
+      "name": "Dr. Hannah Cho",
+      "joins_at": "2026-03-17T19:00:00-04:00",
+      "kind": "scheduled start",
+      "gap_hospitals": null,
+      "without": {
+        "calls": 3.7,
+        "by_hospital": {
+          "SYN-001": 0.36,
+          "SYN-004": 0.22,
+          "SYN-005": 2.46,
+          "SYN-008": 0.3,
+          "SYN-009": 0.24,
+          "SYN-011": 0.14
+        },
+        "hospital_count": 6
+      },
+      "with": {
+        "calls": 3.5,
+        "by_hospital": {
+          "SYN-001": 0.22,
+          "SYN-004": 0.16,
+          "SYN-005": 2.44,
+          "SYN-008": 0.24,
+          "SYN-009": 0.24,
+          "SYN-011": 0.22
+        },
+        "hospital_count": 6,
+        "calls_outside_gap_hospitals": 0
+      }
+    },
+    {
+      "physician_id": "PHY-012",
+      "name": "Dr. Omar Haddad",
+      "joins_at": "2026-03-17T20:00:00-04:00",
+      "kind": "scheduled start",
+      "gap_hospitals": null,
+      "without": {
+        "calls": 0.7,
+        "by_hospital": {
+          "SYN-002": 0.06,
+          "SYN-003": 0.34,
+          "SYN-006": 0.08,
+          "SYN-007": 0.04,
+          "SYN-010": 0.04,
+          "SYN-012": 0.14
+        },
+        "hospital_count": 2
+      },
+      "with": {
+        "calls": 0.6,
+        "by_hospital": {
+          "SYN-002": 0.02,
+          "SYN-003": 0.36,
+          "SYN-006": 0.12,
+          "SYN-007": 0.04,
+          "SYN-010": 0.06,
+          "SYN-012": 0.04
+        },
+        "hospital_count": 2,
+        "calls_outside_gap_hospitals": 0
+      }
+    }
+  ],
+  "others": [
+    {
+      "physician_id": "PHY-001",
+      "name": "Dr. Maya Patel",
+      "without": 3.1,
+      "with": 3.4,
+      "change": 0.3
+    },
+    {
+      "physician_id": "PHY-002",
+      "name": "Dr. Daniel Kim",
+      "without": 2.3,
+      "with": 2.5,
+      "change": 0.2
+    },
+    {
+      "physician_id": "PHY-003",
+      "name": "Dr. Sofia Ramirez",
+      "without": 1.5,
+      "with": 1.6,
+      "change": 0.1
+    },
+    {
+      "physician_id": "PHY-004",
+      "name": "Dr. Ethan Brooks",
+      "without": 3.6,
+      "with": 3.7,
+      "change": 0.1
+    },
+    {
+      "physician_id": "PHY-005",
+      "name": "Dr. Priya Shah",
+      "without": 3.3,
+      "with": 3.3,
+      "change": 0.0
+    },
+    {
+      "physician_id": "PHY-006",
+      "name": "Dr. Marcus Lee",
+      "without": 1.2,
+      "with": 1.2,
+      "change": 0.0
+    },
+    {
+      "physician_id": "PHY-007",
+      "name": "Dr. Elena Torres",
+      "without": 1.5,
+      "with": 1.7,
+      "change": 0.2
+    }
+  ],
+  "unrouted": {
+    "without": 1.5,
+    "with": 1.3
+  },
+  "average_wait_minutes": {
+    "without": 3.2,
+    "with": 3.1
+  },
+  "hospital_names": {
+    "SYN-001": "Cedar Ridge Medical Center",
+    "SYN-002": "Bluewater Regional Hospital",
+    "SYN-003": "Redwood University Medical Center",
+    "SYN-004": "Meadowlands Community Hospital",
+    "SYN-005": "Suncrest Medical Pavilion",
+    "SYN-006": "Highland Valley Hospital",
+    "SYN-007": "Silver Oak Health Center",
+    "SYN-008": "Northfield Medical",
+    "SYN-009": "Lakeview Hospital",
+    "SYN-010": "Oak Valley Medical",
+    "SYN-011": "Harbor Regional",
+    "SYN-012": "Westbridge Hospital"
+  },
+  "headline": [
+    "Dr. Grace Okafor joins at 6:35 PM on a split shift. Without the guard: about 4.3 calls in the next 120 minutes from 4 hospitals, including about 0.3 at hospitals with no gap (Meadowlands Community Hospital). With the guard: about 3.9, all at the gap hospitals.",
+    "Dr. Hannah Cho starts a scheduled shift at 7:00 PM with zero consults. Without the guard: about 3.7 calls; with the guard (counted from the team's median load): about 3.5.",
+    "Dr. Omar Haddad starts a scheduled shift at 8:00 PM with zero consults. Without the guard: about 0.7 calls; with the guard (counted from the team's median load): about 0.6.",
+    "Everyone else takes +0.9 calls in total with the guard. Tonight is busy, so few calls find two doctors free at once and the guard moves only a few calls; its main job is keeping the new doctor on the hospitals that need help. Average wait for a doctor: 3.2 min without, 3.1 min with."
+  ]
+}

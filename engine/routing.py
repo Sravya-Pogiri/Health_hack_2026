@@ -22,6 +22,7 @@ class Candidate:
     night: bool
     blocker: str | None = None          # why routing rule 2 removes them, if it does
     allowed_hospitals: set[str] | None = None   # flood guard: joiner limited to these hospitals
+    seeded_from: int | None = None              # flood guard: real consult count before seeding
 
 
 @dataclass
@@ -59,16 +60,42 @@ def routing_blocker(p, world: World, cfg) -> str | None:
     return None
 
 
-def candidates_from_world(ds, world: World) -> list[Candidate]:
+JOINER_KINDS = ("split_shift", "next_scheduled", "joined")
+
+
+def team_median_consults(world: World, exclude_joiners: bool = True) -> int:
+    counts = sorted(p.consults_this_shift for p in world.physicians.values()
+                    if p.on_shift and not (exclude_joiners and p.shift and p.shift.kind in JOINER_KINDS))
+    if not counts:
+        return 0
+    mid = len(counts) // 2
+    return counts[mid] if len(counts) % 2 else (counts[mid - 1] + counts[mid]) // 2
+
+
+def apply_flood_guard(cand: Candidate, window, median: int, cfg) -> Candidate:
+    """The split-shift trap fix: a joiner starts at the team median load and, for a split shift,
+    only takes calls at the hospitals they joined to cover."""
+    if not cfg.get_path("flood_guard.enabled", True) or window is None or window.kind not in JOINER_KINDS:
+        return cand
+    if cfg.get_path("flood_guard.seed_with_median_consults", True) and cand.consults < median:
+        cand.seeded_from, cand.consults = cand.consults, median
+    if cfg.get_path("flood_guard.limit_to_gap_hospitals", True) and window.kind == "split_shift" and window.hospitals:
+        cand.allowed_hospitals = set(window.hospitals)
+    return cand
+
+
+def candidates_from_world(ds, world: World, guard: bool = True) -> list[Candidate]:
     cfg = ds.cfg
+    median = team_median_consults(world)
     out = []
     for p in world.physicians.values():
-        out.append(Candidate(
+        cand = Candidate(
             id=p.id, name=p.name, credentials=set(ds.ref.credentials.get(p.id, set())), on_shift=p.on_shift,
             consults=p.consults_this_shift, last_answered_at=p.last_answered_at,
             night=is_night(p, cfg, ds.ref.physicians[p.id].role if p.id in ds.ref.physicians else None),
             blocker=routing_blocker(p, world, cfg),
-        ))
+        )
+        out.append(apply_flood_guard(cand, p.shift, median, cfg) if guard else cand)
     return out
 
 
@@ -120,8 +147,9 @@ def route_core(cands: list[Candidate], hospital_id: str, cfg, hospital_name: str
                   "order": [{"physician_id": c.id, "consults": c.consults,
                              "last_answered_at": c.last_answered_at.isoformat() if c.last_answered_at else None}
                             for c in pool]})
-    reason = (f"{chosen.name}: {'low volume, ' if low else ''}{chosen.consults} consults this shift, "
-              f"the fewest among {len(pool)} eligible.")
+    count = (f"{chosen.seeded_from} consults this shift, counted as {chosen.consults} (the team median) by the "
+             f"flood guard" if chosen.seeded_from is not None else f"{chosen.consults} consults this shift")
+    reason = f"{chosen.name}: {'low volume, ' if low else ''}{count}, the fewest among {len(pool)} eligible."
     return RouteResult(hospital_id, chosen.id, chosen.name, steps, reason)
 
 

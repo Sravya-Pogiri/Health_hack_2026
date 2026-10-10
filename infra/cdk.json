@@ -1,0 +1,8 @@
+{
+  "app": "python3 app.py",
+  "context": {
+    "alert_email": "",
+    "offer_email": "",
+    "create_trail": false
+  }
+}

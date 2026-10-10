@@ -109,7 +109,7 @@ def analyze(ds, world: World, joins: list[PlannedJoin] = (), history: dict | Non
 
     if an.now_gaps:
         an.cluster = evaluate(ds, world, an.now_gaps, an.all_gaps, history)
-    an.ctx = Context(ds, world, an.free_in, an.cluster)
+    an.ctx = Context(ds, world, an.free_in, an.cluster, list(joins))
 
     for hid in ds.ref.hospitals:
         an.next_change[hid] = _next_change_text(an, hid)

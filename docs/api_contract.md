@@ -206,22 +206,41 @@ Rule keys, in order: `opt_in`, `credentialed`, `rest`, `week_hours`, `no_overlap
  "hospitals": {"SYN-005": [{"t": "...", "required": 2, "staffed": 3, "free": 0}]}}
 ```
 
-### Offer (M3)
+### Plan and Offer (M3, live)
+
+A plan is what the coordinator proposes and the clinical lead approves. It holds the ranked candidates and the
+eligibility table; approving it sends offers one at a time.
 
 ```jsonc
-{
-  "id": "off-0001",
-  "gap_ids": ["gap-SYN-010-1820", "gap-SYN-005-1900"],
-  "physician_id": "PHY-009", "physician_name": "Dr. Grace Okafor",
-  "hospitals": [{"id": "SYN-010", "name": "Oak Valley Medical"}],
-  "start": "...", "end": "...", "effective_start": "...",
-  "status": "proposed",                         // proposed | approved | rejected | sent | accepted | declined | expired | cancelled | filled
-  "proposed_by": "coordinator", "approved_by": null,
-  "sent_at": null, "expires_at": null, "channel": "app_push",
-  "message_text": "Sevaro coverage request: ...",   // privacy-guarded template, no patient details
-  "history": [{"at": "...", "status": "proposed", "by": "coordinator"}]
-}
+// Plan (in state.plans, and returned by propose, approve, reject)
+{"id": "plan-0001", "kind": "split_shift",            // or "start_early"
+ "title": "Split shift: Suncrest Medical Pavilion, Northfield Medical, Oak Valley Medical, 6:35 PM to 10:00 PM ET",
+ "status": "pending_approval",                        // pending_approval | approved | rejected | filled | exhausted | cancelled
+ "gap_ids": ["gap-SYN-008-2000", "now-SYN-005", "now-SYN-010"], "hospital_names": ["..."],
+ "candidates": [{"physician_id": "PHY-009", "name": "Dr. Grace Okafor", "rank": 1, "window_label": "6:35 PM to 10:00 PM ET",
+                 "hospitals": ["..."], "minutes_to_online": 15, "channel": "app_push"}],
+ "eligibility": Eligibility, "offers": [Offer], "proposed_by": "coordinator", "approved_by": null,
+ "backup_escalated_at": null, "filled_by": []}
+
+// Offer (in state.offers, plan.offers, and GET /api/offers/{id} for the phone)
+{"id": "off-0001", "plan_id": "plan-0001", "physician_id": "PHY-009", "physician_name": "Dr. Grace Okafor",
+ "hospitals": [{"id": "SYN-005", "name": "Suncrest Medical Pavilion"}], "window_label": "6:35 PM to 10:00 PM ET",
+ "start": "...", "end": "...", "minutes_to_online": 15, "channel": "app_push", "channel_label": "app notification",
+ "status": "sent",                                    // sent | accepted | declined | expired | cancelled | filled
+ "message": "Sevaro coverage request: ...",           // privacy-guarded template
+ "sent_at": "...", "expires_at": "...", "seconds_left": 600, "online_at": null, "no_show": false,
+ "kind": "split_shift", "history": [{"at": "...", "status": "sent", "by": "clinical_lead", "note": ""}]}
 ```
+
+Accept and decline return `{"ok": bool, "code": "accepted" | "filled" | "expired" | ..., "message": "...", "offer": Offer}`.
+The phone shows `message` when `ok` is false (for example "This shift is already filled. Thank you.").
+
+Extra keys in `GET /api/state`: `clock` (`mode`, `speed`, `now`, `data_now`), `plans`, `offers`,
+`pending_approvals` (plan IDs), `joins` (accepted offers now counted as coverage), `coordinator_actions`,
+`outbox` (simulated deliveries and internal alerts), `audit_count`. Each issue also has `acknowledged_at` and
+`plan_id` (the plan already proposed for it, if any).
+
+`POST /api/events/upload` returns the load report plus `new_issues`, `resolved_issues`, `top_issue`, and `now`.
 
 ## Other endpoints (M2 and M3)
 
@@ -233,11 +252,16 @@ Rule keys, in order: `opt_in`, `credentialed`, `rest`, `week_hours`, `no_overlap
 | `POST /api/offers/{id}/approve`, `/reject` | Clinical lead decision |
 | `POST /api/offers/{id}/accept`, `/decline`, `/online` | Phone replies |
 | `GET /api/offers/{id}` | Phone view (no patient details) |
-| `POST /api/actions/reassign`, `/escalate`, `/undo` | Coordinator actions |
+| `POST /api/actions/reassign`, `/escalate`, `/contact`, `/reclassify`, `/undo` | Coordinator actions (recorded and audited) |
+| `POST /api/issues/{id}/ack` | Coordinator acknowledges an issue (stops auto-escalation) |
+| `GET /api/physicians/{id}/offers` | A doctor's offers (phone inbox) |
+| `POST /api/uploads/presign` | AWS: presigned S3 upload URL into `raw/`; local: tells the page to POST to `/api/events/upload` |
+| `POST /api/internal/reload`, `POST /api/timers/tick` | Called by the Lambdas; need the `X-Relay-Secret` header |
 | `POST /api/events/upload` | Append a CSV of new events (no restart); returns the load report |
 | `POST /api/events` | Append one event |
 | `POST /api/reset` | Back to the kit data at 6:20 PM |
 | `POST /api/clock` | `{"action": "set" | "advance" | "play" | "pause", "minutes": 5, "to": "..."}` |
 | `GET /api/simulate/flood-guard?gap_id=...` | Routing simulation with and without the flood guard |
-| `GET /api/scoreboard`, `/api/insights/credentialing`, `/api/handoffs`, `/api/audit` | Standouts |
+| `GET /api/audit` | Append-only audit log |
+| `GET /api/scoreboard`, `/api/insights/credentialing`, `/api/handoffs` | Standouts (Milestone 5) |
 | `GET /api/health` | Service health |

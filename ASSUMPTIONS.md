@@ -112,3 +112,38 @@ Every interpretation and default Relay uses, one line each with the reason. Numb
 - **The top recommendation targets the "nobody free now" gaps; each later projected gap gets its own eligibility table.**
 - **Eligible doctors are ranked by gap hospitals covered, then time to get online, then fewer hours this week, fewer offers this week, fewer recent declines.** Never cost, as Sevaro asked.
 - **Offers this week start at 0.** The kit has no offer history; Relay keeps its own.
+
+## Offers and approvals
+
+- **The clinical lead approves a ranked plan once; Relay then offers one doctor at a time.** It moves down the list on a decline, an expiry, or a no-show. "Top two at once" is available for urgent stroke gaps under the same approval.
+- **First acceptance wins, by server order.** A DynamoDB conditional write in the cloud, a lock locally. Later acceptances get "This shift is already filled. Thank you." and are logged.
+- **An accepted doctor is counted from the later of the offer start and acceptance time plus their time to get online.**
+- **No-show: not online within 10 minutes of that time (no `shift_started` event and no "I'm online" tap).** Relay moves to the next doctor on the list.
+- **No decision on a plan within 5 minutes sends it to a backup clinical lead.** An internal alert, allowed automatically.
+- **A plan is cancelled, and its open offers retracted, when none of its gaps remain open.**
+- **Offer history starts at zero for the kit and is kept by Relay.** It drives the 3-per-week and one-open-offer rules.
+- **A doctor who accepted an offer is not offered another shift until that one ends.** They already count as coverage.
+- **"Start early" requests go through the same approval and offer flow.** Any message to a doctor outside their shift needs approval.
+- **A critical issue the coordinator has not acknowledged within 3 minutes alerts the clinical lead automatically.** Internal and low risk.
+- **Offer reasons are limited to "coverage gap now", "projected coverage gap", and "demand surge".** The guard rejects consult IDs, event descriptions, and clinical words.
+- **Coordinator reassignments are recorded and audited, not pushed into Synapse.** Relay models routing; a `physician_assigned` event confirms the change.
+
+## Clock
+
+- **"Now" follows the data: 6:20 PM for the kit, or the latest arrival time after an upload.**
+- **Demo controls can set, advance, play, or pause the clock.** New data never moves a later demo clock backward.
+
+## Flood guard and its simulation
+
+- **A joiner (split shift, scheduled night start, or unscheduled shift start) is counted at the team median of consults when below it.** The brief's routing rules otherwise send them nearly every call.
+- **A split-shift joiner only takes calls at the hospitals in their offer.** Scheduled night doctors are not limited, only seeded.
+- **Simulation: 2 hours, 50 runs, fixed seed 17.** Arrivals follow each hospital's baseline mean for the hour, or the current trailing count while a surge lasts.
+- **A doctor is busy about 17 minutes per consult in the simulation.** That is today's average time on calls and video per consult; imaging waits do not count.
+- **Calls nobody can take retry every 5 minutes, as routing rule 5 says.** Busy doctors free up at their estimate (10 minutes if unknown).
+- **Honest finding: tonight is so busy that the guard moves only a few calls.** Its visible effect is keeping the new doctor off hospitals with no gap.
+
+## Cloud
+
+- **App Runner runs one instance because the engine keeps state in memory.** Scaling out would rebuild state per instance from S3 and DynamoDB.
+- **A file uploaded through the page is stored in S3 and also triggers the ingest Lambda.** The second reload is harmless because duplicates are dropped.
+- **Raw event files are never deleted; a demo reset moves them to `archive/`.**

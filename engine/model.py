@@ -18,6 +18,8 @@ class ShiftWindow:
     start: datetime
     end: datetime
     kind: str  # "scheduled" (on-shift file), "next_scheduled" (roster), "joined" (shift_started event), "split_shift"
+    hospitals: set[str] | None = None   # split shift: the hospitals the offer covers (flood guard limit)
+    source: str | None = None           # offer id for split shifts and early starts
 
     def contains(self, t: datetime) -> bool:
         return self.start <= t < self.end

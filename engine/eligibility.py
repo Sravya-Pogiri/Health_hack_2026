@@ -214,9 +214,12 @@ def evaluate_physician(phys, creds: set[str], targets: list[Gap], all_gaps: list
         f"{week_offers} offer{'s' if week_offers != 1 else ''} this week.", {"offers_this_week": week_offers,
                                                                             "maximum": max_offers}))
     open_offer = history.get("open_offer")
-    results.append(RuleResult(
-        "no_open_offer", "No other open offer", not open_offer,
-        "No open offer." if not open_offer else f"Already has open offer {open_offer}.", {"open_offer": open_offer}))
+    accepted = history.get("accepted_offer")
+    reason = ("No open offer." if not (open_offer or accepted) else
+              f"Already has open offer {open_offer}." if open_offer else
+              f"Already accepted {accepted} ({history.get('accepted_window')}); already counted as coverage.")
+    results.append(RuleResult("no_open_offer", "No other open offer", not (open_offer or accepted), reason,
+                              {"open_offer": open_offer, "accepted_offer": accepted}))
 
     failed = [r for r in results if not r.passed]
     eligible = not failed

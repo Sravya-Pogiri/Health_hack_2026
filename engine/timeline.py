@@ -11,6 +11,7 @@ from datetime import datetime
 
 from .consults import ConsultState, apply_consult_event
 from .dataset import Dataset
+from .model import ShiftWindow
 from .physicians import PhysicianState, apply_physician_event, finalize_physician, init_physician_states
 
 
@@ -26,9 +27,22 @@ class World:
     notes: list[str] = field(default_factory=list)
 
 
-def replay(ds: Dataset, now: datetime) -> World:
+def replay(ds: Dataset, now: datetime, joins=()) -> World:
+    """joins: PlannedJoin records (accepted offers, agreed early starts) that add shift windows."""
     consults: dict[str, ConsultState] = {}
     physicians = init_physician_states(ds.ref.physicians)
+    for j in joins:
+        p = physicians.get(j.physician_id)
+        if p is None:
+            continue
+        if j.kind == "start_early":
+            # Move the start of the scheduled shift earlier rather than adding a second window.
+            later = [w for w in p.windows if w.start >= j.online_at]
+            if later:
+                w = min(later, key=lambda w: w.start)
+                w.start, w.source = j.online_at, j.label
+                continue
+        p.windows.append(ShiftWindow(j.online_at, j.end, "split_shift", j.hospitals, j.label))
     aliases = ds.log.consult_aliases
     applied = pending = 0
     last_event = last_ingested = None

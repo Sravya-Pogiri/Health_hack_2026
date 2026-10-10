@@ -127,14 +127,16 @@ def detect(an) -> list[Issue]:
             severity = "critical"
         need_critical = severity == "critical"
 
-        if c.stage in ("Received", "Triaged") and not c.physician_id and (c.routing_failures or severity):
+        nobody_free = not an.coverage_now.get(hid, {}).get("free") and not c.ringing_to
+        if c.stage in ("Received", "Triaged") and not c.physician_id and (c.routing_failures or severity or nobody_free):
             failures = len(c.routing_failures)
-            sev = severity or "warning"
+            sev = severity or ("warning" if (c.is_stroke or failures) else "info")
             next_up = an.next_up.get(hid)
             plan = _defer(ctx, Need(hid, c, c.is_stroke, sev == "critical"))
             why = (f"Waiting {waited} min since the request. {limit_txt + '. ' if limit_txt else ''}"
-                   f"Routing has failed {failures} time{'s' if failures != 1 else ''}"
-                   f"{' (last at ' + fmt_clock(c.routing_failures[-1]) + ')' if failures else ''}. "
+                   + (f"Routing has failed {failures} time{'s' if failures != 1 else ''} (last at "
+                      f"{fmt_clock(c.routing_failures[-1])}). " if failures else
+                      "No routing attempt has failed yet, but nobody credentialed here is free. ") +
                    f"{next_up.reason if next_up and not next_up.chosen else ''}{recall_txt} {_later(an, hid)} "
                    f"{_soonest_free(an, hid)}").strip()
             issues.append(Issue(f"iss-unassigned-{c.consult_id}", "unassigned_routing_failed", sev, c.is_stroke,

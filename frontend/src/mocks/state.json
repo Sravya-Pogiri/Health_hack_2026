@@ -1883,6 +1883,19 @@
                 "detail": {}
               },
               {
+                "kind": "incoming_join",
+                "label": "A doctor already joining",
+                "viable": false,
+                "approver": "coordinator",
+                "approver_label": "Operations coordinator",
+                "physician_id": null,
+                "eta_minutes": null,
+                "why": "",
+                "why_not": "No accepted offer or early start covers this hospital yet.",
+                "warnings": [],
+                "detail": {}
+              },
+              {
                 "kind": "split_shift",
                 "label": "Offer a split shift to an off-duty doctor",
                 "viable": false,
@@ -1899,7 +1912,9 @@
           },
           "wait_minutes": 16,
           "recall_count": 0,
-          "group_key": "SYN-011"
+          "group_key": "SYN-011",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -2093,6 +2108,19 @@
                 "detail": {}
               },
               {
+                "kind": "incoming_join",
+                "label": "A doctor already joining",
+                "viable": false,
+                "approver": "coordinator",
+                "approver_label": "Operations coordinator",
+                "physician_id": null,
+                "eta_minutes": null,
+                "why": "",
+                "why_not": "No accepted offer or early start covers this hospital yet.",
+                "warnings": [],
+                "detail": {}
+              },
+              {
                 "kind": "start_early",
                 "label": "Ask a scheduled doctor to start early",
                 "viable": false,
@@ -2109,7 +2137,9 @@
           },
           "wait_minutes": 12,
           "recall_count": 0,
-          "group_key": "SYN-010"
+          "group_key": "SYN-010",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -2300,6 +2330,19 @@
                 "detail": {}
               },
               {
+                "kind": "incoming_join",
+                "label": "A doctor already joining",
+                "viable": false,
+                "approver": "coordinator",
+                "approver_label": "Operations coordinator",
+                "physician_id": null,
+                "eta_minutes": null,
+                "why": "",
+                "why_not": "No accepted offer or early start covers this hospital yet.",
+                "warnings": [],
+                "detail": {}
+              },
+              {
                 "kind": "start_early",
                 "label": "Ask a scheduled doctor to start early",
                 "viable": false,
@@ -2316,7 +2359,9 @@
           },
           "wait_minutes": 29,
           "recall_count": 0,
-          "group_key": "SYN-005"
+          "group_key": "SYN-005",
+          "acknowledged_at": null,
+          "plan_id": null
         },
         {
           "id": "iss-unassigned-CON-2114",
@@ -2498,6 +2543,19 @@
                 "detail": {}
               },
               {
+                "kind": "incoming_join",
+                "label": "A doctor already joining",
+                "viable": false,
+                "approver": "coordinator",
+                "approver_label": "Operations coordinator",
+                "physician_id": null,
+                "eta_minutes": null,
+                "why": "",
+                "why_not": "No accepted offer or early start covers this hospital yet.",
+                "warnings": [],
+                "detail": {}
+              },
+              {
                 "kind": "start_early",
                 "label": "Ask a scheduled doctor to start early",
                 "viable": false,
@@ -2514,7 +2572,9 @@
           },
           "wait_minutes": 4,
           "recall_count": 0,
-          "group_key": "SYN-005"
+          "group_key": "SYN-005",
+          "acknowledged_at": null,
+          "plan_id": null
         },
         {
           "id": "iss-surge-SYN-005",
@@ -2696,6 +2756,19 @@
                 "detail": {}
               },
               {
+                "kind": "incoming_join",
+                "label": "A doctor already joining",
+                "viable": false,
+                "approver": "coordinator",
+                "approver_label": "Operations coordinator",
+                "physician_id": null,
+                "eta_minutes": null,
+                "why": "",
+                "why_not": "No accepted offer or early start covers this hospital yet.",
+                "warnings": [],
+                "detail": {}
+              },
+              {
                 "kind": "start_early",
                 "label": "Ask a scheduled doctor to start early",
                 "viable": false,
@@ -2712,7 +2785,9 @@
           },
           "wait_minutes": 5,
           "recall_count": 0,
-          "group_key": "SYN-005"
+          "group_key": "SYN-005",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -2777,7 +2852,9 @@
           },
           "wait_minutes": 36,
           "recall_count": 0,
-          "group_key": "SYN-009"
+          "group_key": "SYN-009",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -2829,7 +2906,9 @@
           },
           "wait_minutes": 20,
           "recall_count": 0,
-          "group_key": "phy-PHY-003"
+          "group_key": "phy-PHY-003",
+          "acknowledged_at": null,
+          "plan_id": null
         },
         {
           "id": "iss-note-CON-2111",
@@ -2867,7 +2946,9 @@
           },
           "wait_minutes": 34,
           "recall_count": 0,
-          "group_key": "phy-PHY-003"
+          "group_key": "phy-PHY-003",
+          "acknowledged_at": null,
+          "plan_id": null
         },
         {
           "id": "iss-note-CON-2115",
@@ -2905,7 +2986,9 @@
           },
           "wait_minutes": 50,
           "recall_count": 0,
-          "group_key": "phy-PHY-003"
+          "group_key": "phy-PHY-003",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -2956,7 +3039,9 @@
           },
           "wait_minutes": -100,
           "recall_count": 0,
-          "group_key": "SYN-008"
+          "group_key": "SYN-008",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -3021,7 +3106,9 @@
           },
           "wait_minutes": -160,
           "recall_count": 0,
-          "group_key": "SYN-001"
+          "group_key": "SYN-001",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -3094,7 +3181,9 @@
           },
           "wait_minutes": -160,
           "recall_count": 0,
-          "group_key": "SYN-003"
+          "group_key": "SYN-003",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -3145,7 +3234,9 @@
           },
           "wait_minutes": 20,
           "recall_count": 0,
-          "group_key": "phy-PHY-006"
+          "group_key": "phy-PHY-006",
+          "acknowledged_at": null,
+          "plan_id": null
         },
         {
           "id": "iss-note-CON-2118",
@@ -3183,7 +3274,9 @@
           },
           "wait_minutes": 45,
           "recall_count": 0,
-          "group_key": "phy-PHY-006"
+          "group_key": "phy-PHY-006",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -3234,7 +3327,9 @@
           },
           "wait_minutes": 42,
           "recall_count": 0,
-          "group_key": "phy-PHY-007"
+          "group_key": "phy-PHY-007",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     },
@@ -3283,7 +3378,9 @@
           },
           "wait_minutes": 0,
           "recall_count": 0,
-          "group_key": "phy-PHY-001"
+          "group_key": "phy-PHY-001",
+          "acknowledged_at": null,
+          "plan_id": null
         }
       ]
     }
@@ -5442,7 +5539,8 @@
               "passed": true,
               "reason": "No open offer.",
               "numbers": {
-                "open_offer": null
+                "open_offer": null,
+                "accepted_offer": null
               }
             }
           ],
@@ -5564,7 +5662,8 @@
               "passed": true,
               "reason": "No open offer.",
               "numbers": {
-                "open_offer": null
+                "open_offer": null,
+                "accepted_offer": null
               }
             }
           ],
@@ -5679,7 +5778,8 @@
               "passed": true,
               "reason": "No open offer.",
               "numbers": {
-                "open_offer": null
+                "open_offer": null,
+                "accepted_offer": null
               }
             }
           ],
@@ -5808,7 +5908,8 @@
               "passed": true,
               "reason": "No open offer.",
               "numbers": {
-                "open_offer": null
+                "open_offer": null,
+                "accepted_offer": null
               }
             }
           ],
@@ -5924,7 +6025,8 @@
               "passed": true,
               "reason": "No open offer.",
               "numbers": {
-                "open_offer": null
+                "open_offer": null,
+                "accepted_offer": null
               }
             }
           ],
@@ -6049,7 +6151,8 @@
               "passed": true,
               "reason": "No open offer.",
               "numbers": {
-                "open_offer": null
+                "open_offer": null,
+                "accepted_offer": null
               }
             }
           ],
@@ -6185,7 +6288,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6295,7 +6399,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6407,7 +6512,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6522,7 +6628,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6632,7 +6739,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6737,7 +6845,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6864,7 +6973,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -6974,7 +7084,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7084,7 +7195,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7201,7 +7313,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7311,7 +7424,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7414,7 +7528,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7541,7 +7656,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7651,7 +7767,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7763,7 +7880,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7878,7 +7996,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -7988,7 +8107,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -8091,7 +8211,8 @@
                 "passed": true,
                 "reason": "No open offer.",
                 "numbers": {
-                  "open_offer": null
+                  "open_offer": null,
+                  "accepted_offer": null
                 }
               }
             ],
@@ -8148,6 +8269,20 @@
     "critical": 5,
     "warning": 8,
     "projected": 3,
-    "stroke_critical": 5
-  }
+    "stroke_critical": 5,
+    "pending_approvals": 0
+  },
+  "clock": {
+    "mode": "data",
+    "speed": 1.0,
+    "now": "2026-03-17T18:20:00-04:00",
+    "data_now": "2026-03-17T18:20:00-04:00"
+  },
+  "plans": [],
+  "offers": [],
+  "pending_approvals": [],
+  "coordinator_actions": [],
+  "joins": [],
+  "outbox": [],
+  "audit_count": 0
 }

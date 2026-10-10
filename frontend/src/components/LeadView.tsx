@@ -1,128 +1,363 @@
-import { post } from "../api";
-import { fmtTime, shortHospital } from "../util";
-import { planStatus } from "./Coordinator";
-import { EligibilityTable } from "./IssueDrawer";
 import { useState } from "react";
+import { post } from "../api";
+import { fmtTime, minutesBetween, mmss, shortHospital } from "../util";
+import { EligibilityTable } from "./IssueDrawer";
+
+// The clinical lead approves or rejects split-shift offers and authorizes escalations.
+// The page answers three questions in order: what needs my decision, where is stroke care short,
+// and what is already moving.
+
+const flat = (state: any) => state.issues.flatMap((g: any) => g.issues);
+const BY = "Clinical lead on duty";
 
 export default function LeadView({ state, act }: any) {
+  const issues = flat(state);
   const pending = state.plans.filter((p: any) => p.status === "pending_approval");
-  const active = state.plans.filter((p: any) => p.status !== "pending_approval");
-  const strokeRisk = state.issues
-    .flatMap((g: any) => g.issues)
-    .filter((i: any) => i.stroke && (i.severity === "critical" || i.type === "coverage_gap_projected"));
-  const escalations = state.coordinator_actions.filter((a: any) => a.kind === "escalate" && a.status !== "undone");
+  const decided = state.plans.filter((p: any) => p.status !== "pending_approval");
+  const escalations = state.coordinator_actions.filter(
+    (a: any) => a.kind === "escalate" && a.status !== "undone" && !(a.issue_id && issues.find((i: any) => i.id === a.issue_id)?.acknowledged_at));
+  const decisions = pending.length + escalations.length;
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-      <div className="section-title">Waiting for your approval ({pending.length})</div>
-      {pending.length === 0 && <div className="panel empty">No offers are waiting for approval.</div>}
-      {pending.map((p: any) => <Approval key={p.id} plan={p} state={state} act={act} />)}
+    <div className="lead">
+      <Pulse state={state} issues={issues} />
 
-      {escalations.length > 0 && (
+      <div className="section-title">Needs your decision ({decisions})</div>
+      {pending.map((p: any) => <Approval key={p.id} plan={p} state={state} act={act} issues={issues} />)}
+      {escalations.map((a: any) => <Escalation key={a.id} a={a} issues={issues} act={act} />)}
+      {decisions === 0 && <NothingYet issues={issues} />}
+
+      <div className="section-title">Coverage outlook</div>
+      <CoverageGrid state={state} />
+
+      <div className="section-title">Stroke care at risk now</div>
+      <StrokeRisk issues={issues} />
+
+      {decided.length > 0 && (
         <>
-          <div className="section-title">Escalated to you</div>
-          {escalations.map((a: any) => (
-            <div key={a.id} className="approval">
-              <span className="chip critical">Escalation</span> <span className="muted small">{fmtTime(a.at)} ET by {a.by}</span>
-              <p style={{ marginBottom: 0 }}>{a.summary}</p>
-            </div>
-          ))}
+          <div className="section-title">Your decisions</div>
+          <Decided plans={decided} />
         </>
       )}
+    </div>
+  );
+}
 
-      <div className="section-title">Stroke care at risk</div>
-      <div className="panel">
-        <table className="t">
+function Pulse({ state, issues }: any) {
+  const strokeNow = issues.filter((i: any) => i.stroke && i.severity === "critical").length;
+  const noneFree = state.hospitals.filter((h: any) => h.free_now === 0 && h.waiting_consults?.length).length;
+  const later = state.gaps.filter((g: any) => g.kind !== "now").length;
+  const joining = state.joins.length;
+  const tiles = [
+    { n: strokeNow, label: `stroke item${strokeNow === 1 ? "" : "s"} past the time limit`, tone: strokeNow ? "critical" : "ok" },
+    { n: noneFree, label: `hospital${noneFree === 1 ? "" : "s"} with a consult waiting and nobody free`, tone: noneFree ? "critical" : "ok" },
+    { n: later, label: `coverage gap${later === 1 ? "" : "s"} coming up`, tone: later ? "projected" : "ok" },
+    { n: joining, label: `doctor${joining === 1 ? "" : "s"} joining from an approved offer`, tone: joining ? "ok" : "info" },
+  ];
+  return (
+    <div className="pulse">
+      {tiles.map((t) => (
+        <div key={t.label} className={`pulse-tile ${t.tone}`}>
+          <span className="n">{t.n}</span>
+          <span className="l">{t.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ decisions
+
+function Approval({ plan, state, act, issues }: any) {
+  const [showTable, setShowTable] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const best = plan.candidates[0];
+  const rows = plan.eligibility?.rows || [];
+  const eligible = rows.filter((r: any) => r.eligible).length;
+  const linked = issues.filter((i: any) => i.plan_id === plan.id);
+  const gapIssues = issues.filter((i: any) => plan.gap_ids.includes(i.id.replace("iss-", "")));
+  const reasons = [...linked, ...gapIssues.filter((g: any) => !linked.includes(g))].slice(0, 4);
+  const waited = minutesBetween(plan.proposed_at, state.now);
+  const [start, end] = best.window_label.replace(" ET", "").split(" to ");
+  const isEarly = plan.kind === "start_early";
+
+  return (
+    <div className="approval lead-approval">
+      <div className="lead-approval-top">
+        <span className="chip accent">{isEarly ? "Early start" : "Split-shift offer"}</span>
+        {reasons.some((i: any) => i.stroke) && <span className="chip stroke">Stroke risk</span>}
+        {plan.backup_escalated_at && <span className="chip warning">Sent to backup lead at {fmtTime(plan.backup_escalated_at)}</span>}
+        <span className="muted small">Proposed by the coordinator {waited > 0 ? `${waited} min ago` : "just now"}</span>
+      </div>
+
+      <h3>{isEarly ? `Let ${best.name} start at ${start}` : `Offer ${best.name} ${start} to ${end}`}</h3>
+
+      <div className="facts">
+        <div><span>Covers</span><b>{best.hospitals.map(shortHospital).join(", ")}</b></div>
+        <div><span>Online in</span><b>{best.minutes_to_online} min</b></div>
+        <div><span>{isEarly ? "Starts early by" : "Shift length"}</span><b>{hoursLabel(plan, best)}</b></div>
+        {!isEarly && rows.length > 0 && (
+          <div>
+            <span>Eligibility</span>
+            <b>
+              {eligible} of {rows.length} qualify{" "}
+              <button className="btn ghost small" onClick={() => setShowTable(!showTable)}>
+                {showTable ? "Hide" : "See all"}
+              </button>
+            </b>
+          </div>
+        )}
+      </div>
+
+      {reasons.length > 0 && (
+        <div className="why-now">
+          <div className="muted small">What this fixes</div>
+          <ul>
+            {reasons.map((i: any) => (
+              <li key={i.id}>
+                <b>{i.where?.hospital_name ? shortHospital(i.where.hospital_name) : "Network"}</b>: {lower(i.title)}
+                {i.severity === "projected" && <span className="muted"> (coming up)</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showTable && <EligibilityTable e={plan.eligibility} />}
+
+      <div className="muted small">
+        {best.name} gets hospital names, hours and start time only. No patient details.
+        {plan.candidates.length > 1 && ` If they decline or don't answer in 10 minutes, it goes to ${plan.candidates[1].name}.`}
+      </div>
+
+      {!rejecting ? (
+        <div className="buttons">
+          <button className="btn primary big" onClick={() => act(() => post(`/api/offers/${plan.id}/approve`, { by: BY }), `Approved. Offer sent to ${best.name}.`)}>
+            Approve and send
+          </button>
+          <button className="btn big" onClick={() => setRejecting(true)}>Reject</button>
+        </div>
+      ) : (
+        <RejectForm planId={plan.id} act={act} onCancel={() => setRejecting(false)} />
+      )}
+    </div>
+  );
+}
+
+const REJECT_REASONS = ["Not needed yet", "Prefer a different fix", "Handle by escalation instead"];
+
+function RejectForm({ planId, act, onCancel }: any) {
+  const [reason, setReason] = useState<string>(REJECT_REASONS[0]);
+  const [note, setNote] = useState("");
+  return (
+    <div className="reject-form">
+      <div className="muted small">Why are you rejecting it? This goes in the audit log.</div>
+      <div className="reason-row">
+        {REJECT_REASONS.map((r) => (
+          <button key={r} className={`btn small ${reason === r ? "selected" : ""}`} onClick={() => setReason(r)}>{r}</button>
+        ))}
+      </div>
+      <input id={`reject-note-${planId}`} className="i" placeholder="Add a note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+      <div className="buttons">
+        <button className="btn danger" onClick={() => act(() => post(`/api/offers/${planId}/reject`, { by: BY, note: note ? `${reason}: ${note}` : reason }), "Rejected. The coordinator has been told.")}>
+          Confirm reject
+        </button>
+        <button className="btn" onClick={onCancel}>Back</button>
+      </div>
+    </div>
+  );
+}
+
+function Escalation({ a, issues, act }: any) {
+  const issue = issues.find((i: any) => i.id === a.issue_id);
+  return (
+    <div className="approval lead-approval">
+      <div className="lead-approval-top">
+        <span className="chip critical">Escalated to you</span>
+        {issue?.stroke && <span className="chip stroke">Stroke risk</span>}
+        <span className="muted small">{fmtTime(a.at)} by the coordinator</span>
+      </div>
+      <h3>{issue ? `${issue.where?.hospital_name ? shortHospital(issue.where.hospital_name) + ": " : ""}${issue.title}` : "Escalation"}</h3>
+      <p className="esc-text">{a.summary}</p>
+      {issue?.what_to_do?.primary?.why && <div className="muted small">Relay: {issue.what_to_do.primary.why}</div>}
+      <div className="buttons">
+        <button className="btn primary" onClick={() => act(() => post(`/api/issues/${a.issue_id}/ack`, { by: BY }), "Taken. Logged with your name.")}>
+          I'm handling it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NothingYet({ issues }: any) {
+  // Fixes that will need the lead's approval once the coordinator proposes them.
+  const coming = issues.filter((i: any) => i.what_to_do?.primary?.approver === "clinical_lead" && !i.plan_id
+    && ["split_shift", "start_early", "escalate_lead"].includes(i.what_to_do.primary.kind));
+  return (
+    <div className="panel quiet">
+      <b>Nothing needs your decision right now.</b>
+      {coming.length > 0 ? (
+        <>
+          <span className="muted"> These will come to you once the coordinator proposes them:</span>
+          <ul>
+            {coming.slice(0, 4).map((i: any) => (
+              <li key={i.id}>
+                <b>{i.where?.hospital_name ? shortHospital(i.where.hospital_name) : "Network"}</b>:{" "}
+                {i.what_to_do.primary.kind === "escalate_lead" ? `${lower(i.title)}, and no off-duty doctor qualifies, so it will be escalated to you` : i.what_to_do.primary.label}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <span className="muted"> Offers and escalations will appear here.</span>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ coverage
+
+function CoverageGrid({ state }: any) {
+  const times: string[] = state.projection.times;
+  const all = state.hospitals.map((h: any) => ({ h, pts: state.projection.hospitals[h.id] || [] }));
+  // Keep hospitals an approved doctor is joining for, so the filled gap shows up green.
+  const joinedFor = new Set(state.joins.flatMap((j: any) => j.hospitals || []));
+  const short = all.filter((x: any) => x.pts.some((p: any) => p.short > 0) || joinedFor.has(x.h.id))
+    .sort((a: any, b: any) => firstShort(a.pts) - firstShort(b.pts));
+  const fine = all.length - short.length;
+  const joiners = new Set(state.joins.map((j: any) => j.physician_id));
+  const names: Record<string, string> = {};
+  state.physicians.forEach((p: any) => (names[p.id] = p.name));
+
+  if (short.length === 0) {
+    return <div className="panel quiet"><b>Every hospital is covered</b> <span className="muted">through {fmtTime(times[times.length - 1])}.</span></div>;
+  }
+  return (
+    <div className="panel cov">
+      <div className="cov-scroll">
+        <table className="cov-grid">
+          <thead>
+            <tr>
+              <th />
+              {times.map((t, i) => <th key={t}>{i === 0 ? "Now" : fmtTime(t).replace(" PM", "").replace(" AM", "")}</th>)}
+            </tr>
+          </thead>
           <tbody>
-            {strokeRisk.map((i: any) => (
-              <tr key={i.id}>
-                <td style={{ width: 90 }}><span className={`chip ${i.severity}`}>{i.severity === "critical" ? "Critical" : "Coming up"}</span></td>
-                <td><b>{i.what}</b><div className="muted small">{i.why}</div></td>
-                <td style={{ width: 260 }}>{i.what_to_do?.primary?.label}</td>
+            {short.map(({ h, pts }: any) => (
+              <tr key={h.id}>
+                <th>{shortHospital(h.name)}{h.surge?.active && <span className="chip warning tiny">Surge</span>}</th>
+                {pts.map((p: any) => {
+                  const helped = p.staffed_ids.some((id: string) => joiners.has(id)) && joinedFor.has(h.id);
+                  const cls = p.short > 0 ? "short" : helped ? "helped" : "ok";
+                  return (
+                    <td key={p.t} className={cls}
+                      title={`${fmtTime(p.t)}: ${p.staffed} of ${p.required} needed. ${p.staffed_ids.map((i: string) => names[i] || i).join(", ") || "Nobody"}`}>
+                      {p.staffed}/{p.required}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      {active.length > 0 && (
-        <>
-          <div className="section-title">Decided plans</div>
-          <div className="panel">
-            <table className="t">
-              <tbody>
-                {active.map((p: any) => (
-                  <tr key={p.id}>
-                    <td style={{ width: 90 }}>{p.id}</td>
-                    <td>{p.title}</td>
-                    <td>{planStatus(p)}{p.approved_by ? ` (approved by ${p.approved_by})` : ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      <div className="cov-legend muted small">
+        <span><i className="sw short" />Short</span>
+        <span><i className="sw helped" />Covered by an approved offer</span>
+        <span><i className="sw ok" />Covered</span>
+        <span>Cells show credentialed doctors on shift / needed. {fine} other hospital{fine === 1 ? " is" : "s are"} covered the whole time.</span>
+      </div>
     </div>
   );
 }
 
-function Approval({ plan, state, act }: any) {
-  const [showTable, setShowTable] = useState(false);
-  const issues = state.issues.flatMap((g: any) => g.issues).filter((i: any) => i.plan_id === plan.id);
-  const best = plan.candidates[0];
-  const rows = plan.eligibility?.rows || [];
-  const checked = rows.length;
-  const eligible = rows.filter((r: any) => r.eligible).length;
-  const why = issues.slice(0, 3);
+const firstShort = (pts: any[]) => { const i = pts.findIndex((p) => p.short > 0); return i < 0 ? 99 : i; };
+
+// ------------------------------------------------------------------ stroke risk
+
+function StrokeRisk({ issues }: any) {
+  const [open, setOpen] = useState<string | null>(null);
+  const rows = issues.filter((i: any) => i.stroke && i.severity === "critical");
+  if (rows.length === 0) return <div className="panel quiet"><b>No stroke consult is past its limit.</b></div>;
   return (
-    <div className="approval">
-      <span className="chip accent">{plan.kind === "start_early" ? "Early start request" : "Split-shift offer"}</span>{" "}
-      {issues.some((i: any) => i.stroke) && <span className="chip stroke">Stroke risk</span>}
-      {plan.backup_escalated_at && <span className="chip warning">Sent to backup lead at {fmtTime(plan.backup_escalated_at)}</span>}
-      <h3>{plan.title}</h3>
-      {plan.summary && (
-        <div className="summary" style={{ fontSize: 16 }}>
-          {plan.summary.text}
-          <div className="muted small">{plan.summary.source === "bedrock" ? "Summary written by Amazon Bedrock from the fields below; the decision itself is computed by rules." : "Summary built from the fields below."}</div>
-        </div>
-      )}
-      <div className="summary">
-        <b>{best.name}</b> would cover {best.hospitals.map(shortHospital).join(", ")}, {best.window_label}, online in{" "}
-        {best.minutes_to_online} min.{" "}
-        {plan.kind === "split_shift"
-          ? `${checked} off-duty doctors were checked against every rule; ${eligible === 1 ? "only this one qualifies" : `${eligible} qualify, ranked by speed then fairness`}. No rule was bent.`
-          : `${plan.eligibility?.note || ""}`}
-        {plan.candidates.length > 1 && ` If they decline or do not answer in 10 minutes, Relay offers it to ${plan.candidates.slice(1).map((c: any) => c.name).join(", then ")}.`}
-      </div>
-      {why.length > 0 && (
-        <>
-          <div className="muted small" style={{ marginTop: 8 }}>Why it is needed</div>
-          <ul style={{ marginTop: 4 }}>
-            {why.map((i: any) => <li key={i.id}><b>{i.what}</b> {i.why}</li>)}
-          </ul>
-        </>
-      )}
-      <div className="muted small">
-        The doctor will receive only hospital names, hours, start time, and why they were asked. No patient information.
-      </div>
-      {plan.eligibility?.rows && (
-        <button className="btn ghost small" onClick={() => setShowTable(!showTable)}>
-          {showTable ? "Hide" : "Show"} every doctor considered
-        </button>
-      )}
-      {showTable && <EligibilityTable e={plan.eligibility} />}
-      <div className="buttons">
-        <button className="btn primary big" onClick={() => act(() => post(`/api/offers/${plan.id}/approve`, { by: "Clinical lead on duty" }), "Approved. Offer sent.")}>
-          Approve and send
-        </button>
-        <button className="btn big" onClick={() => {
-          const note = prompt("Reason for rejecting (optional)") || "";
-          act(() => post(`/api/offers/${plan.id}/reject`, { by: "Clinical lead on duty", note }), "Rejected");
-        }}>
-          Reject
-        </button>
-      </div>
+    <div className="panel risk">
+      {rows.map((i: any) => {
+        const p = i.what_to_do?.primary;
+        const yours = p?.approver === "clinical_lead";
+        const covered = p?.kind === "incoming_join" && p?.viable;
+        return (
+          <div key={i.id} className="risk-row">
+            <button className="risk-main" onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>
+              <span className="risk-where">{i.where?.hospital_name ? shortHospital(i.where.hospital_name) : i.where?.physician_name}</span>
+              <span className="risk-what">{i.title}</span>
+              <span className="risk-time">{i.wait_minutes ? `${i.wait_minutes} min` : ""}</span>
+              <span className={`risk-owner ${covered ? "covered" : yours ? "yours" : ""}`}>
+                {covered ? "Help on the way" : yours ? "Needs your approval" : "Coordinator"}
+              </span>
+            </button>
+            {open === i.id && (
+              <div className="risk-detail">
+                <div>{i.why}</div>
+                {p && <div className="muted">Fix: {p.label}{p.approver_label ? ` (${p.approver_label})` : ""}</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
+
+// ------------------------------------------------------------------ decided
+
+function Decided({ plans }: any) {
+  return (
+    <div className="panel risk">
+      {plans.map((p: any) => {
+        const last = p.offers?.[p.offers.length - 1];
+        const s = decidedStatus(p, last);
+        return (
+          <div key={p.id} className="risk-row static">
+            <span className={`chip ${s.tone}`}>{s.chip}</span>
+            <span className="risk-what">{p.candidates[0]?.name}, {p.candidates[0]?.window_label}</span>
+            <span className="muted small">{s.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function decidedStatus(p: any, offer: any) {
+  if (p.status === "rejected") return { chip: "Rejected", tone: "info", text: p.decision_note || "" };
+  if (p.status === "filled") return { chip: "Filled", tone: "ok", text: "Accepted. Coverage updated." };
+  if (p.status === "exhausted") return { chip: "No taker", tone: "critical", text: "Nobody accepted. Escalate." };
+  if (offer?.status === "sent") return { chip: "Waiting", tone: "warning", text: `Offer sent to ${offer.physician_name}, ${mmss(offer.seconds_left)} left to answer` };
+  if (offer) return { chip: "Approved", tone: "accent", text: `Offer to ${offer.physician_name}: ${offer.status}` };
+  return { chip: "Approved", tone: "accent", text: "" };
+}
+
+// ------------------------------------------------------------------ helpers
+
+function hoursLabel(plan: any, best: any): string {
+  const offer = plan.offers?.[0];
+  let mins = 0;
+  if (offer) mins = minutesBetween(offer.start, offer.end);
+  else {
+    const [a, b] = best.window_label.replace(" ET", "").split(" to ");
+    mins = clockMinutes(b) - clockMinutes(a);
+    if (mins < 0) mins += 24 * 60;
+  }
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h ? `${h} h${m ? ` ${m} min` : ""}` : `${m} min`;
+}
+
+function clockMinutes(label: string): number {
+  const m = label.trim().match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return 0;
+  let h = Number(m[1]) % 12;
+  if (m[3].toUpperCase() === "PM") h += 12;
+  return h * 60 + Number(m[2]);
+}
+
+const lower = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t);

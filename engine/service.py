@@ -20,7 +20,10 @@ from .metrics import publish
 from .notify import Notifier, make_notifier
 from .offers import Candidate, OfferBook
 from .serialize import analysis_json
+from .insights import credentialing_impact, handoffs, scoreboard, time_to_doctor
 from .simulate import simulate_flood_guard
+from .summary import plan_summary
+from .voice import speak
 from .storage import make_storage
 from .timeline import replay
 from .timeutil import fmt_clock, iso, minutes_between
@@ -87,6 +90,11 @@ class RelayService:
                     issue["plan_id"] = self._plan_for_issue(issue)
             out["clock"] = self.clock.to_dict(self.ds.default_now())
             out["plans"] = [self.book.plan_json(p, now) for p in self.book.plans.values()]
+            issues_flat = [i for g in out["issues"] for i in g["issues"]]
+            for p in out["plans"]:
+                p["summary"] = self._summary(p, issues_flat)
+            out["handoff_confirmations"] = {a["consult_id"]: a["at"] for a in self.coordinator_actions
+                                            if a["kind"] == "handoff_confirmed" and a.get("status") != "undone"}
             out["offers"] = [self.book.offer_json(o, now) for o in self.book.offers.values()]
             out["pending_approvals"] = [p["id"] for p in out["plans"] if p["status"] == "pending_approval"]
             out["coordinator_actions"] = self.coordinator_actions[-50:]
@@ -391,6 +399,34 @@ class RelayService:
                              e.event_type, e.physician_id, e.hospital_id, e.description, e.source])
         self.storage.save_processed(buf.getvalue())
 
+    def _summary(self, plan: dict, issues: list[dict]) -> dict:
+        linked = [i for i in issues if i.get("plan_id") == plan["id"]] or [
+            i for i in issues if set(plan["gap_ids"]) & {i["id"].replace("iss-", "", 1)}]
+        rows = (plan.get("eligibility") or {}).get("rows") or []
+        best = plan["candidates"][0]
+        problem = linked[0]["what"].rstrip(".") if linked else "coverage is short at " + ", ".join(plan["hospital_names"])
+        fields = {"kind": plan["kind"], "doctor": best["name"], "hospitals": ", ".join(best["hospitals"]),
+                  "window": best["window_label"], "checked": len(rows),
+                  "eligible": sum(1 for r in rows if r.get("eligible")) or 1,
+                  "scheduled": best["window_label"].split(" to ")[-1], "problem": problem[0].lower() + problem[1:]}
+        return plan_summary(fields)
+
+    def scoreboard(self) -> dict:
+        with self.lock:
+            key = (len(self.ds.events), self.now())
+            if getattr(self, "_score_cache", (None,))[0] != key:
+                self._score_cache = (key, scoreboard(self.ds, self.now()))
+            return self._score_cache[1]
+
+    def insights(self) -> dict:
+        with self.lock:
+            an = self.analysis()
+            return {"time_to_doctor": time_to_doctor(self.ds, an.world),
+                    "credentialing": credentialing_impact(self.ds, an), "handoffs": handoffs(self.ds, an)}
+
+    def voice(self, offer_id: str) -> bytes | None:
+        return speak(self.book.offers[offer_id].message)
+
     # ------------------------------------------------------------ extras
     def simulate(self, gap_id: str | None = None) -> dict:
         with self.lock:
@@ -404,7 +440,25 @@ class RelayService:
                     joins.append(PlannedJoin(result.best.physician_id, o.online_at, o.end,
                                              set(o.hospitals) if limit else None, "recommended offer"))
             sim_world = replay(self.ds, an.world.now, [j for j in joins if j.label != "recommended offer"])
-            return simulate_flood_guard(self.ds, sim_world, an, joins)
+            result = simulate_flood_guard(self.ds, sim_world, an, joins)
+            new = [j for j in joins if j.label == "recommended offer"]
+            if new:
+                base = simulate_flood_guard(self.ds, sim_world, an, [])
+                j = new[0]
+                hours = round((j.end - j.online_at).total_seconds() / 3600, 1)
+                w0, w1 = base["average_wait_minutes"]["with"], result["average_wait_minutes"]["with"]
+                u0, u1 = base["unrouted"]["with"], result["unrouted"]["with"]
+                result["value_of_acting"] = {
+                    "physician_hours": hours, "wait_without_offer": w0, "wait_with_offer": w1,
+                    "unrouted_without_offer": u0, "unrouted_with_offer": u1,
+                    "text": (f"Cost: {hours} extra physician hours. Over the next {result['minutes']} minutes the "
+                             f"average wait for a doctor goes from {w0} to {w1} min, and calls nobody can take from "
+                             f"{u0} to {u1} (simulated estimate)."),
+                    "note": ("Research average, illustrative only: each 15 minutes faster to stroke treatment is linked "
+                             "to about 4% better odds of a good outcome. This compares acting with not acting; it never "
+                             "compares doctors by cost."),
+                }
+            return result
 
     def audit(self) -> list[dict]:
         return list(self.book.audit)

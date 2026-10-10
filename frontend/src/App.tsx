@@ -5,12 +5,13 @@ import Coordinator from "./components/Coordinator";
 import LeadView from "./components/LeadView";
 import PhoneView, { OfferScreen } from "./components/PhoneView";
 import AuditView from "./components/AuditView";
+import InsightsView from "./components/InsightsView";
 
-export type Role = "coordinator" | "lead" | "phone" | "audit";
+export type Role = "coordinator" | "lead" | "phone" | "insights" | "audit";
 
 function roleFromHash(): Role {
   const h = window.location.hash.replace("#", "");
-  return (["coordinator", "lead", "phone", "audit"].includes(h) ? h : "coordinator") as Role;
+  return (["coordinator", "lead", "phone", "insights", "audit"].includes(h) ? h : "coordinator") as Role;
 }
 
 export default function App() {
@@ -88,6 +89,7 @@ function Main() {
         {role === "coordinator" && <Coordinator state={state} act={act} />}
         {role === "lead" && <LeadView state={state} act={act} />}
         {role === "phone" && <PhoneView state={state} act={act} />}
+        {role === "insights" && <InsightsView state={state} act={act} />}
         {role === "audit" && <AuditView state={state} />}
         <div className="footer">
           All data is synthetic. Relay uses no patient information: matching uses hospital, consult type, stage, and

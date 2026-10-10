@@ -323,7 +323,7 @@
       "self_reported_status": "Available",
       "desktop_agent": "Offline",
       "derived_state": "Available",
-      "activity_text": "Idle",
+      "activity_text": "Phone ringing, CON-2109, Westbridge Hospital",
       "verdict": {
         "code": "ringing",
         "label": "Phone ringing",
@@ -8280,9 +8280,14 @@
         "Suncrest Medical Pavilion",
         "Northfield Medical",
         "Oak Valley Medical"
-      ]
+      ],
+      "summary": {
+        "text": "A stroke consult at Oak Valley Medical is waiting and nobody approved there can take it. Dr. Grace Okafor is the only one who meets every rule of 6 off-duty doctors checked, and one offer (6:35 PM to 10:00 PM ET) covers Suncrest Medical Pavilion, Northfield Medical, Oak Valley Medical.",
+        "source": "template"
+      }
     }
   ],
+  "handoff_confirmations": {},
   "offers": [
     {
       "id": "off-0001",
@@ -8355,13 +8360,13 @@
   "outbox": [
     {
       "kind": "internal",
-      "sent_wall_time": "2026-10-10T20:19:13.119873+00:00",
+      "sent_wall_time": "2026-10-10T20:41:49.386890+00:00",
       "audience": "clinical_lead",
       "text": "Approval needed: Split shift: Suncrest Medical Pavilion, Northfield Medical, Oak Valley Medical, 6:35 PM to 10:00 PM ET"
     },
     {
       "kind": "offer",
-      "sent_wall_time": "2026-10-10T20:19:13.132611+00:00",
+      "sent_wall_time": "2026-10-10T20:41:49.403740+00:00",
       "physician_id": "PHY-009",
       "channel": "app_push",
       "text": "Sevaro coverage request: Suncrest Medical Pavilion, Northfield Medical, and Oak Valley Medical, 6:35 PM to 10:00 PM Eastern. Reason: coverage gap now. You were asked because you are credentialed at all three hospitals, fully rested and can be online quickly. Please reply by 6:30 PM.",
@@ -8369,7 +8374,7 @@
     },
     {
       "kind": "internal",
-      "sent_wall_time": "2026-10-10T20:19:13.142195+00:00",
+      "sent_wall_time": "2026-10-10T20:41:49.415057+00:00",
       "audience": "coordinator",
       "text": "Dr. Grace Okafor accepted: Split shift: Suncrest Medical Pavilion, Northfield Medical, Oak Valley Medical, 6:35 PM to 10:00 PM ET"
     }

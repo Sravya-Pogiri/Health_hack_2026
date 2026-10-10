@@ -95,7 +95,7 @@ export function OfferScreen({ offerId }: { offerId: string }) {
           <div className="phone-buttons">
             <button className="btn primary" onClick={() => respond("accept")}>Accept</button>
             <button className="btn" onClick={() => respond("decline")}>Decline</button>
-            <PlayOffer text={o.message} />
+            <PlayOffer text={o.message} offerId={o.id} />
           </div>
         </>
       )}
@@ -134,12 +134,16 @@ function whyYou(message: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) + "." : "";
 }
 
-// Reads the guarded offer text aloud (browser speech; ElevenLabs voice when configured on the server).
-function PlayOffer({ text }: { text: string }) {
-  if (!("speechSynthesis" in window)) return null;
-  return (
-    <button className="btn ghost" onClick={() => window.speechSynthesis.speak(new SpeechSynthesisUtterance(text))}>
-      Play offer aloud
-    </button>
-  );
+// Reads the guarded offer text aloud: ElevenLabs voice when configured on the server, else the browser voice.
+function PlayOffer({ text, offerId }: { text: string; offerId: string }) {
+  const play = async () => {
+    const res = await fetch(`/api/offers/${offerId}/voice`);
+    if (res.ok) {
+      const url = URL.createObjectURL(await res.blob());
+      new Audio(url).play();
+    } else if ("speechSynthesis" in window) {
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    }
+  };
+  return <button className="btn ghost" onClick={play}>Play offer aloud</button>;
 }

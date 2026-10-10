@@ -323,7 +323,7 @@
       "self_reported_status": "Available",
       "desktop_agent": "Offline",
       "derived_state": "Available",
-      "activity_text": "Idle",
+      "activity_text": "Phone ringing, CON-2109, Westbridge Hospital",
       "verdict": {
         "code": "ringing",
         "label": "Phone ringing",
@@ -9089,9 +9089,14 @@
         "Suncrest Medical Pavilion",
         "Northfield Medical",
         "Oak Valley Medical"
-      ]
+      ],
+      "summary": {
+        "text": "A stroke consult at Oak Valley Medical is waiting and nobody approved there can take it. Dr. Grace Okafor is the only one who meets every rule of 6 off-duty doctors checked, and one offer (6:35 PM to 10:00 PM ET) covers Suncrest Medical Pavilion, Northfield Medical, Oak Valley Medical.",
+        "source": "template"
+      }
     }
   ],
+  "handoff_confirmations": {},
   "offers": [],
   "pending_approvals": [
     "plan-0001"
@@ -9101,7 +9106,7 @@
   "outbox": [
     {
       "kind": "internal",
-      "sent_wall_time": "2026-10-10T20:19:13.119873+00:00",
+      "sent_wall_time": "2026-10-10T20:41:49.386890+00:00",
       "audience": "clinical_lead",
       "text": "Approval needed: Split shift: Suncrest Medical Pavilion, Northfield Medical, Oak Valley Medical, 6:35 PM to 10:00 PM ET"
     }

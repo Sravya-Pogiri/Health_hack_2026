@@ -81,6 +81,12 @@ function Approval({ plan, state, act }: any) {
       {issues.some((i: any) => i.stroke) && <span className="chip stroke">Stroke risk</span>}
       {plan.backup_escalated_at && <span className="chip warning">Sent to backup lead at {fmtTime(plan.backup_escalated_at)}</span>}
       <h3>{plan.title}</h3>
+      {plan.summary && (
+        <div className="summary" style={{ fontSize: 16 }}>
+          {plan.summary.text}
+          <div className="muted small">{plan.summary.source === "bedrock" ? "Summary written by Amazon Bedrock from the fields below; the decision itself is computed by rules." : "Summary built from the fields below."}</div>
+        </div>
+      )}
       <div className="summary">
         <b>{best.name}</b> would cover {best.hospitals.map(shortHospital).join(", ")}, {best.window_label}, online in{" "}
         {best.minutes_to_online} min.{" "}

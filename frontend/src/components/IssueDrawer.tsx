@@ -206,6 +206,12 @@ export function FloodGuard({ r }: any) {
   const names = r.hospital_names;
   return (
     <>
+      {r.value_of_acting && (
+        <div className="summary">
+          <b>Value of acting.</b> {r.value_of_acting.text}
+          <div className="muted small">{r.value_of_acting.note}</div>
+        </div>
+      )}
       {r.headline.map((h: string, i: number) => <p key={i}>{h}</p>)}
       {r.joiners.map((j: any) => {
         const gap = new Set(j.gap_hospitals || []);

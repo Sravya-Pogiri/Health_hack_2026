@@ -147,3 +147,13 @@ Every interpretation and default Relay uses, one line each with the reason. Numb
 - **App Runner runs one instance because the engine keeps state in memory.** Scaling out would rebuild state per instance from S3 and DynamoDB.
 - **A file uploaded through the page is stored in S3 and also triggers the ingest Lambda.** The second reload is harmless because duplicates are dropped.
 - **Raw event files are never deleted; a demo reset moves them to `archive/`.**
+
+## Standouts
+
+- **The scoreboard reruns the engine every 5 minutes from the first hour of the day, using only records that had arrived by then.** It reports when a problem was first flagged, never patient outcomes.
+- **Scoreboard headlines use the current episode.** For example, when today's Suncrest surge began, not an earlier surge that ended; the recommendation time is when the current top doctor first became the recommendation.
+- **Credentialing impact counts three kinds of problems a doctor could have covered if credentialed at that hospital.** A failed routing attempt while they were free; a "nobody free now" gap while they are free; a projected gap of one doctor while they are on shift.
+- **Handoff cards cover every open consult of a doctor within 60 minutes of shift end.** Notes are suggested to be finished by the same doctor; other stages go to the least-loaded credentialed doctor on shift after they leave.
+- **The clinical lead summary is two sentences from structured, non-patient fields.** Amazon Bedrock writes it when a model is configured; otherwise a template does. The decision is always made by the rules.
+- **"Value of acting" compares the simulation with and without the recommended offer.** It is an estimate of waits and unanswered calls, never a comparison of doctors by cost. The note on 4% better odds per 15 minutes is labeled as an illustrative research average.
+- **Offer audio uses ElevenLabs when a key is configured and the browser voice otherwise.** Only the guarded offer text is ever spoken.

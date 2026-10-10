@@ -186,5 +186,14 @@
     "Dr. Hannah Cho starts a scheduled shift at 7:00 PM with zero consults. Without the guard: about 3.7 calls; with the guard (counted from the team's median load): about 3.5.",
     "Dr. Omar Haddad starts a scheduled shift at 8:00 PM with zero consults. Without the guard: about 0.7 calls; with the guard (counted from the team's median load): about 0.6.",
     "Everyone else takes +0.9 calls in total with the guard. Tonight is busy, so few calls find two doctors free at once and the guard moves only a few calls; its main job is keeping the new doctor on the hospitals that need help. Average wait for a doctor: 3.2 min without, 3.1 min with."
-  ]
+  ],
+  "value_of_acting": {
+    "physician_hours": 3.4,
+    "wait_without_offer": 4.8,
+    "wait_with_offer": 3.1,
+    "unrouted_without_offer": 3.4,
+    "unrouted_with_offer": 1.3,
+    "text": "Cost: 3.4 extra physician hours. Over the next 120 minutes the average wait for a doctor goes from 4.8 to 3.1 min, and calls nobody can take from 3.4 to 1.3 (simulated estimate).",
+    "note": "Research average, illustrative only: each 15 minutes faster to stroke treatment is linked to about 4% better odds of a good outcome. This compares acting with not acting; it never compares doctors by cost."
+  }
 }

@@ -84,7 +84,7 @@ a { color: var(--accent); }
 .hosp .later { color: var(--projected); font-size: 11.5px; margin-top: 1px; }
 
 /* Chips */
-.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip { flex: none; display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .chip.critical { background: var(--critical-soft); color: var(--critical); }
 .chip.warning { background: var(--warning-soft); color: var(--warning); }
 .chip.projected { background: var(--projected-soft); color: var(--projected); }

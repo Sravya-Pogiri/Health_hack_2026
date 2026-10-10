@@ -323,7 +323,7 @@
       "self_reported_status": "Available",
       "desktop_agent": "Offline",
       "derived_state": "Available",
-      "activity_text": "Idle",
+      "activity_text": "Phone ringing, CON-2109, Westbridge Hospital",
       "verdict": {
         "code": "ringing",
         "label": "Phone ringing",
@@ -8279,6 +8279,7 @@
     "data_now": "2026-03-17T18:20:00-04:00"
   },
   "plans": [],
+  "handoff_confirmations": {},
   "offers": [],
   "pending_approvals": [],
   "coordinator_actions": [],

@@ -8,6 +8,7 @@ const ROLES: [Role, string][] = [
   ["coordinator", "Coordinator"],
   ["lead", "Clinical lead"],
   ["phone", "Doctor phone"],
+  ["insights", "Insights"],
   ["audit", "Audit log"],
 ];
 

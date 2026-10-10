@@ -120,6 +120,18 @@ class RelayStack(Stack):
             "RELAY_AUDIT_TABLE": audit.table_name, "RELAY_OFFERS_TOPIC_ARN": offers_topic.topic_arn,
             "RELAY_ALERTS_TOPIC_ARN": alerts_topic.topic_arn, "RELAY_TICKER": "0", "PORT": "8080",
         }
+        # Optional sponsor features, switched on with deploy-time context (cdk deploy -c bedrock_model=...).
+        if self.node.try_get_context("bedrock_model"):
+            env["RELAY_BEDROCK_MODEL"] = self.node.try_get_context("bedrock_model")
+        if self.node.try_get_context("teams_webhook"):
+            env["RELAY_TEAMS_WEBHOOK"] = self.node.try_get_context("teams_webhook")
+        runtime_secrets = [apprunner.CfnService.KeyValuePairProperty(name="RELAY_SHARED_SECRET",
+                                                                      value=secret.secret_arn)]
+        if self.node.try_get_context("elevenlabs_secret_arn"):
+            arn = self.node.try_get_context("elevenlabs_secret_arn")
+            runtime_secrets.append(apprunner.CfnService.KeyValuePairProperty(name="ELEVENLABS_API_KEY", value=arn))
+            instance_role.add_to_policy(iam.PolicyStatement(actions=["secretsmanager:GetSecretValue"],
+                                                            resources=[arn]))
         service = apprunner.CfnService(
             self, "Service", service_name="relay",
             source_configuration=apprunner.CfnService.SourceConfigurationProperty(
@@ -132,8 +144,7 @@ class RelayStack(Stack):
                         port="8080",
                         runtime_environment_variables=[apprunner.CfnService.KeyValuePairProperty(name=k, value=v)
                                                        for k, v in env.items()],
-                        runtime_environment_secrets=[apprunner.CfnService.KeyValuePairProperty(
-                            name="RELAY_SHARED_SECRET", value=secret.secret_arn)]))),
+                        runtime_environment_secrets=runtime_secrets))),
             instance_configuration=apprunner.CfnService.InstanceConfigurationProperty(
                 cpu="1 vCPU", memory="2 GB", instance_role_arn=instance_role.role_arn),
             health_check_configuration=apprunner.CfnService.HealthCheckConfigurationProperty(

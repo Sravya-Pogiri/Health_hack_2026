@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import Body, FastAPI, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from engine.config import REPO_ROOT
 from engine.privacy import PrivacyViolation
@@ -100,6 +100,40 @@ def eligibility(gap_id: str | None = None):
 @app.get("/api/simulate/flood-guard")
 def flood_guard(gap_id: str | None = None):
     return svc().simulate(gap_id)
+
+
+@app.get("/api/scoreboard")
+def get_scoreboard():
+    return svc().scoreboard()
+
+
+@app.get("/api/insights")
+def get_insights():
+    return svc().insights()
+
+
+@app.get("/api/insights/credentialing")
+def get_credentialing():
+    return svc().insights()["credentialing"]
+
+
+@app.get("/api/handoffs")
+def get_handoffs():
+    return svc().insights()["handoffs"]
+
+
+@app.post("/api/handoffs/{consult_id}/confirm")
+def confirm_handoff(consult_id: str, body: dict = Body(default={})):
+    return svc().coordinator_action("handoff_confirmed", {"consult_id": consult_id, **body},
+                                    body.get("by", "receiving physician"))
+
+
+@app.get("/api/offers/{offer_id}/voice")
+def offer_voice(offer_id: str):
+    audio = svc().voice(offer_id)
+    if audio is None:
+        raise HTTPException(404, "Voice is not configured; the page uses the browser voice instead.")
+    return Response(content=audio, media_type="audio/mpeg")
 
 
 @app.get("/api/audit")

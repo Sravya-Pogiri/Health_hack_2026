@@ -130,3 +130,22 @@ def test_flood_guard_proof(client):
 def test_static_route_does_not_escape(client):
     assert client.get("/..%2F..%2Fconfig.yaml").status_code == 404 or \
         "min_rest_hours" not in client.get("/..%2F..%2Fconfig.yaml").text
+
+
+def test_standouts(client):
+    s = client.get("/api/scoreboard").json()
+    assert any("Suncrest" in h for h in s["headlines"]) and any("Okafor" in h for h in s["headlines"])
+    ins = client.get("/api/insights").json()
+    assert {h["consult_id"] for h in ins["handoffs"]} >= {"CON-2111", "CON-2115", "CON-2118"}
+    assert ins["credentialing"]["top"][0]["hospital_id"] == "SYN-010"
+    assert "credentialing" in ins["credentialing"]["note"]
+    assert client.post("/api/handoffs/CON-2102/confirm", json={}).json()["kind"] == "handoff_confirmed"
+    assert client.get("/api/state").json()["handoff_confirmations"]["CON-2102"]
+    sim = client.get("/api/simulate/flood-guard").json()
+    assert sim["value_of_acting"]["physician_hours"] > 0
+    plan = client.post("/api/offers/propose", json={"issue_id": "iss-unassigned-CON-2105"}).json()
+    summary = next(p for p in client.get("/api/state").json()["plans"] if p["id"] == plan["id"])["summary"]
+    assert summary["source"] == "template" and "Oak Valley Medical" in summary["text"]
+    offer = client.post(f"/api/offers/{plan['id']}/approve", json={}).json()["offers"][0]
+    assert client.get(f"/api/offers/{offer['id']}/voice").status_code == 404     # no ElevenLabs key: browser voice
+

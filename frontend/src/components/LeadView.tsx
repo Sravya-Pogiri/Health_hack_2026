@@ -38,7 +38,7 @@ export default function LeadView({ state, act }: any) {
         </Card>
       </div>
 
-      <Card title="Coverage outlook" sub="Hospitals that go short in the next few hours. On shift / required, every 15 minutes.">
+      <Card title="Coverage outlook: hospitals that go short" sub="Only hospitals with a coverage gap in the next few hours. On shift / required, every 15 minutes.">
         <CoverageGrid state={state} />
       </Card>
 

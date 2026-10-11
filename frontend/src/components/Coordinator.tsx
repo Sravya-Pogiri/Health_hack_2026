@@ -12,7 +12,6 @@ const SEVERITY_COLOR: Record<string, string> = {
 
 const NO_FLAG_RANK = 1e9;
 const SHIFT_END_SOON_MIN = 60;
-const HOSPITALS_SHOWN = 6;
 const INTERVENTIONS_SHOWN = 3;
 
 export default function Coordinator({ state, act }: any) {
@@ -106,7 +105,6 @@ function ShortMark() {
 // ---------------------------------------------------------------------------------------------
 
 function CoverageTable({ state }: any) {
-  const [all, setAll] = useState(false);
   const names: Record<string, string> = {};
   for (const p of state.physicians) names[p.id] = lastName(p.name);
 
@@ -125,11 +123,9 @@ function CoverageTable({ state }: any) {
       if (!flags[hid] || g.rank < flags[hid].rank) flags[hid] = { rank: g.rank, severity: g.severity };
     }
   }
-  // Then hospitals that go short later, so a projected gap is never hidden behind "View all".
-  const shortLater = (h: any) => cols.some((i) => (state.projection?.hospitals?.[h.id]?.[i]?.short || 0) > 0);
-  const order = (h: any) => flags[h.id]?.rank ?? (shortLater(h) ? NO_FLAG_RANK - 1 : NO_FLAG_RANK);
-  const hospitals = [...state.hospitals].sort((a: any, b: any) => order(a) - order(b));
-  const shown = all ? hospitals : hospitals.slice(0, HOSPITALS_SHOWN);
+  const hospitals = [...state.hospitals].sort(
+    (a: any, b: any) => (flags[a.id]?.rank ?? NO_FLAG_RANK) - (flags[b.id]?.rank ?? NO_FLAG_RANK),
+  );
 
   return (
     <section className="card cov-card">
@@ -152,7 +148,7 @@ function CoverageTable({ state }: any) {
             </tr>
           </thead>
           <tbody>
-            {shown.map((h: any) => (
+            {hospitals.map((h: any) => (
               <CoverageRow key={h.id} h={h} flag={flags[h.id]} cols={cols}
                 series={state.projection?.hospitals?.[h.id] || []} names={names} />
             ))}
@@ -164,11 +160,6 @@ function CoverageTable({ state }: any) {
           <span><i className="sw covered" />Covered</span>
           <span><i className="sw short" />Short</span>
         </span>
-        {hospitals.length > HOSPITALS_SHOWN && (
-          <button className="link" onClick={() => setAll(!all)}>
-            {all ? "Show fewer hospitals" : `View all ${hospitals.length} hospitals`} <Arrow />
-          </button>
-        )}
       </div>
     </section>
   );

@@ -269,6 +269,25 @@ def load_demo_event(name: str):
     return svc().upload(path.read_text(encoding="utf-8-sig"), name)
 
 
+@app.get("/api/dataset")
+def dataset_info():
+    return svc().dataset_info()
+
+
+@app.post("/api/dataset")
+async def load_dataset(files: list[UploadFile], name: str = ""):
+    """Replace the whole network with new kit files (CSV files or a zip)."""
+    uploaded = [(f.filename or "file.csv", await f.read()) for f in files]
+    if not uploaded:
+        raise HTTPException(400, "No files.")
+    return svc().load_dataset(uploaded, name)
+
+
+@app.post("/api/dataset/sample")
+def use_sample_dataset():
+    return svc().use_sample_dataset()
+
+
 @app.post("/api/reset")
 def reset():
     svc().reset()

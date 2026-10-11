@@ -3,6 +3,7 @@ import { post } from "../api";
 import { fmtTime, fmtTimeSec } from "../util";
 import type { Role } from "../App";
 import AddEvents from "./AddEvents";
+import LoadDataset from "./LoadDataset";
 
 const ROLES: [Role, string][] = [
   ["coordinator", "Coordinator"],
@@ -12,8 +13,9 @@ const ROLES: [Role, string][] = [
   ["audit", "Audit log"],
 ];
 
-export default function Header({ state, role, setRole }: any) {
+export default function Header({ state, role, setRole, act }: any) {
   const [health, setHealth] = useState(false);
+  const [loading, setLoading] = useState(false);
   const dh = state.data_health;
   const pending = state.pending_approvals?.length || 0;
   const demoClock = state.clock.mode !== "data";
@@ -32,6 +34,12 @@ export default function Header({ state, role, setRole }: any) {
           </button>
         ))}
       </nav>
+      <div className="header-right">
+      <button className={`btn ds-btn ${state.dataset?.source === "uploaded" ? "uploaded" : ""}`} onClick={() => setLoading(true)}
+        title={`Data: ${state.dataset?.name || "sample"}. Upload a new dataset.`}>
+        <SimIcon d="M12 3v12M7 8l5-5 5 5M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" />
+        {state.dataset?.source === "uploaded" ? "Uploaded data" : "Upload new dataset"}
+      </button>
       <div className="asof">
         {state.clock.mode === "playing" && <span className="playing-pill">Playing {state.clock.speed}x</span>}
         <strong>{state.clock.mode === "playing" ? fmtTimeSec(state.now) : fmtTime(state.now)} ET</strong>
@@ -41,7 +49,9 @@ export default function Header({ state, role, setRole }: any) {
           {demoClock && " (demo clock)"}
         </button>
       </div>
+      </div>
       {health && <HealthPanel dh={dh} onClose={() => setHealth(false)} />}
+      {loading && <LoadDataset state={state} act={act} onClose={() => setLoading(false)} />}
     </header>
   );
 }

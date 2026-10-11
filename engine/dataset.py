@@ -51,7 +51,11 @@ class Dataset:
                 return latest
         day = self.ref.scenario_date
         default = self.cfg.get_path("clock.default_now")
-        if day and default:
+        if default == "latest":                       # an uploaded dataset: now = its latest record
+            latest = self.log.latest_ingested()
+            if latest:
+                return latest
+        if day and default and default != "latest":
             return at_et(day, parse_hhmm(default))
         latest = self.log.latest_ingested()
         return latest if latest else datetime.now(ET)

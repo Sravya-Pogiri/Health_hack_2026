@@ -93,7 +93,7 @@ function Main() {
 
   return (
     <>
-      <Header state={state} role={role} setRole={changeRole} />
+      <Header state={state} role={role} setRole={changeRole} act={act} />
       <div className="page">
         <div className="page-head">
           <div>

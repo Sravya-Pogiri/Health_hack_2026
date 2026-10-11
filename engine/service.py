@@ -7,14 +7,17 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import threading
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from .analysis import analyze
 from .clock import Clock
 from .config import REPO_ROOT, load_config
 from .coverage import PlannedJoin
 from .dataset import Dataset
+from . import dataset_import
 from .loader import EVENT_COLUMNS
 from .metrics import publish
 from .notify import Notifier, make_notifier
@@ -38,8 +41,71 @@ class RelayService:
         self._build()
 
     # ------------------------------------------------------------ setup
+    # ------------------------------------------------------------ which dataset
+    @property
+    def _datasets_root(self):
+        return Path(getattr(self.storage, "root", REPO_ROOT / "data" / "state")) / "datasets"
+
+    def _active_dataset(self) -> dict | None:
+        p = self._datasets_root / "active.json"
+        if not p.exists():
+            return None
+        info = json.loads(p.read_text(encoding="utf-8"))
+        return info if Path(info.get("dir", "")).is_dir() else None
+
+    def _make_dataset(self) -> Dataset:
+        info = self._active_dataset()
+        if not info:
+            return Dataset(self.cfg)
+        cfg = self.cfg.with_overrides({"clock": {"default_now": "latest"}})
+        return Dataset(cfg, info["dir"])
+
+    def dataset_info(self) -> dict:
+        info = self._active_dataset()
+        ref = self.ds.ref
+        out = {"source": "uploaded" if info else "sample", "name": info["name"] if info else "Sample kit (6:20 PM)",
+               "loaded_at": info.get("loaded_at") if info else None,
+               "hospitals": len(ref.hospitals), "physicians": len(ref.physicians), "events": len(self.ds.events),
+               "scenario_date": ref.scenario_date.isoformat() if ref.scenario_date else None}
+        return out
+
+    def load_dataset(self, files: list[tuple[str, bytes]], name: str = "") -> dict:
+        """Replace the whole network with an uploaded dataset. Clears offers, actions and added events."""
+        try:
+            texts = dataset_import.expand(files)
+        except Exception as exc:  # a broken zip or a file that is not text
+            return {"ok": False, "errors": [f"Could not read the upload: {exc}"], "files": []}
+        result = dataset_import.classify(texts)
+        public = {k: v for k, v in result.items() if k != "roles"}
+        if result["errors"]:
+            return {"ok": False, **public}
+        with self.lock:
+            folder = dataset_import.write(result["roles"], self._datasets_root)
+            zips = [n for n, _ in files if n.lower().endswith(".zip")]
+            label = name or (Path(zips[0]).stem if len(zips) == 1 and len(files) == 1
+                             else f"Uploaded dataset ({len(result['roles'])} files)")
+            (self._datasets_root / "active.json").write_text(json.dumps(
+                {"dir": str(folder), "name": label, "loaded_at": datetime.now().astimezone().isoformat()}),
+                encoding="utf-8")
+            self.reset()
+            an = self.analysis()
+            top = an.groups[0] if an.groups else None
+            report = self.ds.load_report.to_dict()
+            return {"ok": True, **public, "dataset": self.dataset_info(), "now": self.now().isoformat(),
+                    "skipped_rows": report["skipped_rows"], "load_warnings": report["warnings"],
+                    "issues": len(an.groups),
+                    "top_issue": ({"group": top.title, "what": top.top.what} if top else None)}
+
+    def use_sample_dataset(self) -> dict:
+        with self.lock:
+            p = self._datasets_root / "active.json"
+            if p.exists():
+                p.unlink()
+            self.reset()
+            return {"ok": True, "dataset": self.dataset_info(), "now": self.now().isoformat()}
+
     def _build(self) -> None:
-        self.ds = Dataset(self.cfg)
+        self.ds = self._make_dataset()
         for name, text in self.storage.list_uploads():
             self.ds.append_csv_text(text, name)
         self.clock = Clock()
@@ -89,6 +155,7 @@ class RelayService:
                     issue["acknowledged_at"] = self.acks.get(issue["id"])
                     issue["plan_id"] = self._plan_for_issue(issue)
             out["clock"] = self.clock.to_dict(self.ds.default_now())
+            out["dataset"] = self.dataset_info()
             out["plans"] = [self.book.plan_json(p, now) for p in self.book.plans.values()]
             issues_flat = [i for g in out["issues"] for i in g["issues"]]
             for p in out["plans"]:
@@ -166,7 +233,7 @@ class RelayService:
     def reload_events(self) -> dict:
         """Rebuild the day from the kit plus every stored events file (called by the ingest Lambda)."""
         with self.lock:
-            self.ds = Dataset(self.cfg)
+            self.ds = self._make_dataset()
             for name, text in self.storage.list_uploads():
                 self.ds.append_csv_text(text, name)
             self.clock.after_append(self.ds.default_now())

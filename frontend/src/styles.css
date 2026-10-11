@@ -687,3 +687,12 @@ table.t.boxed .findings ul { margin: 6px 0 0; padding-left: 16px; }
 .stroke-metric { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .stroke-metric .muted { font-size: 12px; }
 .stroke-metric .chip { font-size: 11px; }
+
+/* Demo clock playing */
+.playing-pill {
+  display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; padding: 2px 9px; border-radius: 999px;
+  background: var(--warning-soft); color: var(--warning); font-size: 12px; font-weight: 600; vertical-align: 2px;
+}
+.playing-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.sim-buttons .btn.playing { background: var(--warning-soft); border-color: #f3d29c; color: var(--warning); font-weight: 600; }

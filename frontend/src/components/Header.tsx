@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { post } from "../api";
-import { fmtTime } from "../util";
+import { fmtTime, fmtTimeSec } from "../util";
 import type { Role } from "../App";
 import AddEvents from "./AddEvents";
 
@@ -37,7 +37,8 @@ export default function Header({ state, role, setRole }: any) {
         ))}
       </nav>
       <div className="asof">
-        <strong>{fmtTime(state.now)} ET</strong>
+        {state.clock.mode === "playing" && <span className="playing-pill">Playing {state.clock.speed}x</span>}
+        <strong>{state.clock.mode === "playing" ? fmtTimeSec(state.now) : fmtTime(state.now)} ET</strong>
         <button className="asof-health" onClick={() => setHealth(true)} title="Data health">
           <span className={`dot ${dh.stale ? "stale" : "ok"}`} />
           {dh.stale ? "Feed quiet since" : "Updated"} {fmtTime(dh.data_as_of)}
@@ -63,11 +64,18 @@ export function SimBar({ state, act }: any) {
         <button className="btn" onClick={() => clockCmd({ action: "advance", minutes: 5 })}>+5 min</button>
         <button className="btn" onClick={() => clockCmd({ action: "advance", minutes: 10 })}>+10 min</button>
         {clock.mode === "playing" ? (
-          <button className="btn" onClick={() => clockCmd({ action: "pause" })}><SimIcon d="M7 5h3v14H7zM14 5h3v14h-3z" fill /> Pause</button>
-        ) : (
-          <button className="btn" title="Run the clock at 10 times real speed" onClick={() => clockCmd({ action: "play", speed: 10 })}>
-            <SimIcon d="M7 4.5l12 7.5-12 7.5z" fill /> Play 10x
+          <button className="btn playing" onClick={() => clockCmd({ action: "pause" }, "Clock paused")}>
+            <SimIcon d="M7 5h3v14H7zM14 5h3v14h-3z" fill /> Pause ({clock.speed}x)
           </button>
+        ) : (
+          <>
+            <button className="btn" title="10 times real speed: one minute every 6 seconds" onClick={() => clockCmd({ action: "play", speed: 10 }, "Playing at 10x: one minute every 6 seconds")}>
+              <SimIcon d="M7 4.5l12 7.5-12 7.5z" fill /> Play 10x
+            </button>
+            <button className="btn" title="60 times real speed: one minute every second" onClick={() => clockCmd({ action: "play", speed: 60 }, "Playing at 60x: one minute every second")}>
+              <SimIcon d="M4 4.5l9 7.5-9 7.5zM12 4.5l9 7.5-9 7.5z" fill /> Play 60x
+            </button>
+          </>
         )}
         {clock.mode !== "data" && (
           <button className="btn" title="Go back to the time of the latest data" onClick={() => clockCmd({ action: "follow_data" }, "Clock follows the data again")}>Live</button>

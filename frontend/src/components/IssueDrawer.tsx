@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { api } from "../api";
-import { fmtTime, lastName, SEVERITY_LABEL, shortHospital } from "../util";
+import { capitalize, fmtTime, lastName, SEVERITY_LABEL, shortHospital } from "../util";
 import { actionFor, Chevron, planStatus } from "./Coordinator";
 
 // The shift-offer table only matters when the recommended fix is an offer.
@@ -66,7 +66,7 @@ export default function IssueDrawer({ issueId, state, act, onClose }: any) {
               </div>
               <button className="btn small" title="Close (Esc)" onClick={onClose}>Close</button>
             </div>
-            <h2 className="dtitle">{place && <b>{place} </b>}<span>{problem}</span></h2>
+            <h2 className="dtitle">{place && <b>{place} </b>}<span>{capitalize(problem)}</span></h2>
             <p className="dwhat">{d.what}</p>
             {where && <div className="dwhere">{where}</div>}
 

@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { post } from "../api";
-import { fmtHour, fmtTime, lastName, shortHospital } from "../util";
+import { capitalize, fmtHour, fmtTime, lastName, shortHospital } from "../util";
 import IssueDrawer from "./IssueDrawer";
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -23,31 +23,22 @@ export default function Coordinator({ state, act }: any) {
   const rowProps = { state, act, open: setOpenIssue };
 
   return (
-    <div className="coord">
+    <div className="lead">
       {dh.stale && (
         <div className="banner stale">
           No new records for {dh.last_record_minutes_ago} minutes (last at {fmtTime(dh.data_as_of)} ET). Busy doctors may
           have freed up or new consults may be waiting. Check the Synapse feed before acting.
         </div>
       )}
-      <div className="stats">
-        <StatCard label="Critical" count={critical.length} color={SEVERITY_COLOR.critical} />
-        <StatCard label="Coming up" count={comingUp.length} color={SEVERITY_COLOR.projected} />
-        <StatCard label={warnings.length === 1 ? "Warning" : "Warnings"} count={warnings.length} color={SEVERITY_COLOR.warning} />
-        <StatCard label="Awaiting approval" count={pending} color="var(--accent)" />
-      </div>
+      <Pulse critical={critical.length} comingUp={comingUp.length} warnings={warnings.length} pending={pending} />
 
-      <div className="sec">
-        <h2>Coverage</h2>
-        <span className="hint">staffed / needed · red means short</span>
-      </div>
+      <div className="section-title">Coverage</div>
       <CoverageTable state={state} />
 
-      <div className="sec">
-        <h2>Do next</h2>
-        <span className="hint">click a row for the reasoning</span>
+      <div className="section-title">
+        Do next ({critical.length}) <span className="hint">click a row for the reasoning</span>
       </div>
-      <div className="qlist">
+      <div className="panel qlist">
         {critical.map((g: any) => <QueueRow key={g.id} group={g} {...rowProps} />)}
         {critical.length === 0 && <div className="qempty">Nothing critical right now.</div>}
         <Fold label="Coming up" groups={comingUp} defaultOpen={critical.length === 0} {...rowProps} />
@@ -60,11 +51,22 @@ export default function Coordinator({ state, act }: any) {
   );
 }
 
-function StatCard({ label, count, color }: { label: string; count: number; color: string }) {
+// Four tiles in the same style as the Clinical lead page.
+function Pulse({ critical, comingUp, warnings, pending }: any) {
+  const tiles = [
+    { n: critical, label: `critical item${critical === 1 ? "" : "s"} to act on`, tone: critical ? "critical" : "ok" },
+    { n: comingUp, label: `item${comingUp === 1 ? "" : "s"} coming up`, tone: comingUp ? "projected" : "ok" },
+    { n: warnings, label: `warning${warnings === 1 ? "" : "s"} to watch`, tone: warnings ? "warning" : "ok" },
+    { n: pending, label: "waiting on the clinical lead", tone: pending ? "projected" : "info" },
+  ];
   return (
-    <div className="stat">
-      <div className="stat-num" style={{ color: count > 0 ? color : "var(--faint)" }}>{count}</div>
-      <div className="stat-label">{label}</div>
+    <div className="pulse">
+      {tiles.map((t) => (
+        <div key={t.label} className={`pulse-tile ${t.tone}`}>
+          <span className="n">{t.n}</span>
+          <span className="l">{t.label}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -115,22 +117,29 @@ function CoverageTable({ state }: any) {
   );
 
   return (
-    <div className="cv-wrap">
-      <table className="cv">
-        <thead>
-          <tr>
-            <th />
-            <th>Now</th>
-            {cols.map((i) => <th key={i}>{fmtHour(times[i])}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {hospitals.map((h: any) => (
-            <CoverageRow key={h.id} h={h} flag={flags[h.id]} cols={cols}
-              series={state.projection?.hospitals?.[h.id] || []} names={names} />
-          ))}
-        </tbody>
-      </table>
+    <div className="panel cov">
+      <div className="cov-scroll">
+        <table className="cov-grid cov-hosp">
+          <thead>
+            <tr>
+              <th />
+              <th>Now</th>
+              {cols.map((i) => <th key={i}>{fmtHour(times[i])}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {hospitals.map((h: any) => (
+              <CoverageRow key={h.id} h={h} flag={flags[h.id]} cols={cols}
+                series={state.projection?.hospitals?.[h.id] || []} names={names} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="cov-legend muted small">
+        <span><i className="sw short" />Short</span>
+        <span><i className="sw ok" />Covered</span>
+        <span>Cells show credentialed doctors on shift / needed. Click a hospital to see who is free.</span>
+      </div>
     </div>
   );
 }
@@ -142,34 +151,34 @@ function CoverageRow({ h, flag, cols, series, names }: any) {
   const list = (ids: string[]) => ids.map((id) => names[id] || id).join(", ");
   return (
     <Fragment>
-      <tr className="cv-row" tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={onActivate(toggle)}>
-        <td>
+      <tr className="cov-row" tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={onActivate(toggle)}>
+        <th scope="row">
           <span className="cv-name" title={h.name}>
             <span className="sdot" style={{ background: flag ? SEVERITY_COLOR[flag.severity] : "transparent" }} />
             <span className="n">{shortHospital(h.name)}</span>
             {h.surge.active && (
-              <span className="cv-surge" title={`${h.surge.trailing_count} consults in the last hour; normal busy level is ${h.surge.p90}`}>
+              <span className="chip warning tiny" title={`${h.surge.trailing_count} consults in the last hour; normal busy level is ${h.surge.p90}`}>
                 Surge
               </span>
             )}
             <span className="cv-chev"><Chevron open={open} /></span>
           </span>
-        </td>
-        <td className={h.staffed_now < h.required_now ? "short" : ""}>
-          <b>{h.staffed_now}/{h.required_now}</b>
+        </th>
+        <td className={`now ${h.staffed_now < h.required_now ? "short" : "ok"}`}>
+          {h.staffed_now}/{h.required_now}
           <span className={`cv-free ${h.free_now === 0 ? "none" : ""}`}>{h.free_now} free</span>
         </td>
         {cols.map((i: number) => {
           const p = series[i];
           return p ? (
-            <td key={i} className={p.short > 0 ? "short" : ""}><b>{p.staffed}/{p.required}</b></td>
+            <td key={i} className={p.short > 0 ? "short" : "ok"}>{p.staffed}/{p.required}</td>
           ) : (
             <td key={i} />
           );
         })}
       </tr>
       {open && (
-        <tr className="cv-detail">
+        <tr className="cov-detail">
           <td colSpan={2 + cols.length}>
             <span className="k">Free</span>
             {h.free_ids.length ? <span className="ok-text">{list(h.free_ids)}</span> : <span className="bad-text">nobody</span>}
@@ -256,12 +265,11 @@ function QueueRow({ group, state, act, open }: any) {
 
   return (
     <div className="qitem">
-      <div className="qrow">
-        <span className="sdot" style={{ background: SEVERITY_COLOR[group.severity] || SEVERITY_COLOR.info }} />
+      <div className="qrow" style={{ borderLeftColor: SEVERITY_COLOR[group.severity] || SEVERITY_COLOR.info }}>
+        <span className="risk-where" title={place}>{shortHospital(place || where.hospital_name || where.physician_name || "")}</span>
         <div className="qmain" role="button" tabIndex={0} aria-expanded={expanded} onClick={toggle} onKeyDown={onActivate(toggle)}>
           <div className="qtitle">
-            {place && <b>{place} </b>}
-            <span className="muted">{problem}</span>
+            <span>{capitalize(problem)}</span>
             {issue.acknowledged_at && <span className="chip ok" style={{ marginLeft: 8 }}>Acknowledged</span>}
           </div>
           {primary && <div className="qaction" title={primary.label}>{primary.label}</div>}
@@ -401,15 +409,8 @@ function DoctorList({ state }: any) {
 
   return (
     <>
-      <div className="sec">
-        <h2>Doctors on shift</h2>
-        <span className="hint legend">
-          {(["free", "busy", "check", "out"] as Tone[]).map((t) => (
-            <span key={t}><span className="sdot" style={{ background: TONE_COLOR[t] }} /> {t}</span>
-          ))}
-        </span>
-      </div>
-      <div className="cv-wrap">
+      <div className="section-title">Doctors on shift</div>
+      <div className="panel">
         <table className="dr">
           <thead>
             <tr><th>Doctor</th><th>Status</th><th>Doing</th><th>Ends</th><th>Consults</th></tr>
@@ -418,6 +419,12 @@ function DoctorList({ state }: any) {
             {sorted.map((p: any) => <DoctorRow key={p.id} p={p} />)}
           </tbody>
         </table>
+      </div>
+      <div className="cov-legend muted small">
+        {(["free", "busy", "check", "out"] as Tone[]).map((t) => (
+          <span key={t}><span className="sdot" style={{ background: TONE_COLOR[t], marginRight: 5 }} />{t}</span>
+        ))}
+        <span>Click a doctor for the reason.</span>
       </div>
       {off.length > 0 && (
         <div className="offshift">

@@ -10,6 +10,10 @@ export function fmtHour(iso?: string | null): string {
   return fmtTime(iso).replace(":00", "");
 }
 
+export function capitalize(text: string): string {
+  return text ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
 export function lastName(name: string): string {
   return name.replace(/^Dr\.\s+/, "").split(" ").slice(-1)[0];
 }

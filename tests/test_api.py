@@ -139,6 +139,14 @@ def test_standouts(client):
     assert {h["consult_id"] for h in ins["handoffs"]} >= {"CON-2111", "CON-2115", "CON-2118"}
     assert ins["credentialing"]["top"][0]["hospital_id"] == "SYN-010"
     assert "credentialing" in ins["credentialing"]["note"]
+    northfield = next(h for h in ins["time_to_doctor"]["hospitals"] if h["hospital_id"] == "SYN-008")
+    assert northfield["median_stroke_to_video"] == 45.5       # full request-to-video interval
+    assert northfield["median_stroke_imaging_to_video"] == 6.5
+    assert northfield["stroke_videos"] == 5
+    assert northfield["stroke_video_criticals"] == 2
+    suncrest = next(h for h in ins["time_to_doctor"]["hospitals"] if h["hospital_id"] == "SYN-005")
+    assert suncrest["median_stroke_imaging_to_video"] == 27.1
+    assert suncrest["stroke_video_criticals"] == 2
     assert client.post("/api/handoffs/CON-2102/confirm", json={}).json()["kind"] == "handoff_confirmed"
     assert client.get("/api/state").json()["handoff_confirmations"]["CON-2102"]
     sim = client.get("/api/simulate/flood-guard").json()

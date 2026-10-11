@@ -663,3 +663,27 @@ table.t.boxed tbody tr:hover td { background: var(--hover); }
 .card .facts { background: var(--panel); gap: 0; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: none; }
 .card .facts > div + div { border-left: 1px solid var(--line); }
 @media (max-width: 760px) { .card .facts { grid-auto-flow: row; grid-template-columns: 1fr 1fr; } .card .facts > div + div { border-left: 0; } }
+
+/* Insights: replay summary tiles, findings, handoffs, time to doctor */
+.insights-pulse { margin-bottom: 4px; }
+.insights-pulse .pulse-tile .n { font-size: 22px; }
+.insights-pulse .pulse-tile .l small { display: block; font-size: 12px; color: var(--faint); margin-top: 2px; }
+.pulse-tile.ok { --tone: #22a35a; }
+.iv-dot.inline { display: inline-block; width: 9px; height: 9px; margin-right: 8px; vertical-align: 0; }
+.iv-dot.projected { background: var(--amber); }
+.handoff-leaving { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 6px; }
+.handoff-leaving strong { font-size: 22px; font-weight: 700; color: var(--warning); }
+.handoff-leaving span { color: var(--muted); font-size: 13.5px; }
+.handoff-plan { font-size: 13.5px; line-height: 1.4; padding: 8px 10px; background: var(--panel-2); border-radius: 8px; }
+.handoff-plan span { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
+.handoff .findings { margin: 8px 0 0; font-size: 13px; }
+.num-badge { display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 12.5px; }
+table.t.boxed .findings { margin: 0; font-size: 12.5px; }
+table.t.boxed .findings ul { margin: 6px 0 0; padding-left: 16px; }
+.card .findings table.t.boxed { margin-top: 8px; }
+.stat-chip { display: grid; text-align: right; padding: 6px 12px; border-radius: 10px; background: var(--accent-soft); line-height: 1.2; }
+.stat-chip span { font-size: 11.5px; color: var(--muted); }
+.stat-chip b { font-size: 18px; color: var(--accent); }
+.stroke-metric { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stroke-metric .muted { font-size: 12px; }
+.stroke-metric .chip { font-size: 11px; }

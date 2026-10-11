@@ -115,17 +115,25 @@ def time_to_doctor(ds, world) -> dict:
     for c in world.consults.values():
         if not c.received_at:
             continue
-        d = by_h.setdefault(c.hospital_id, {"contact": [], "video": []})
+        d = by_h.setdefault(c.hospital_id, {"contact": [], "video": [], "imaging_to_video": []})
         if c.contacted_at:
             d["contact"].append((c.contacted_at - c.received_at).total_seconds() / 60)
         if c.is_stroke and c.video_started_at:
             d["video"].append((c.video_started_at - c.received_at).total_seconds() / 60)
+            if c.imaging_returned_at:
+                d["imaging_to_video"].append(
+                    (c.video_started_at - c.imaging_returned_at).total_seconds() / 60)
     rows = []
     for hid in sorted(by_h):
         d = by_h[hid]
         rows.append({"hospital_id": hid, "hospital": names.get(hid, hid), "consults": len(d["contact"]),
                      "median_to_contact": round(median(d["contact"]), 1) if d["contact"] else None,
-                     "median_stroke_to_video": round(median(d["video"]), 1) if d["video"] else None})
+                     "median_stroke_to_video": round(median(d["video"]), 1) if d["video"] else None,
+                     "stroke_videos": len(d["imaging_to_video"]),
+                     "stroke_video_warnings": sum(x >= 6 for x in d["imaging_to_video"]),
+                     "stroke_video_criticals": sum(x >= 12 for x in d["imaging_to_video"]),
+                     "median_stroke_imaging_to_video":
+                         round(median(d["imaging_to_video"]), 1) if d["imaging_to_video"] else None})
     all_contact = [x for d in by_h.values() for x in d["contact"]]
     return {"hospitals": rows, "network_median_to_contact": round(median(all_contact), 1) if all_contact else None}
 

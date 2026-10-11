@@ -12,68 +12,92 @@ const ROLES: [Role, string][] = [
   ["audit", "Audit log"],
 ];
 
-export default function Header({ state, role, setRole, act }: any) {
-  const [adding, setAdding] = useState(false);
+export default function Header({ state, role, setRole }: any) {
   const [health, setHealth] = useState(false);
   const dh = state.data_health;
-  const clock = state.clock;
   const pending = state.pending_approvals?.length || 0;
+  const demoClock = state.clock.mode !== "data";
 
+  return (
+    <header className="header">
+      <div className="brand">
+        <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M8 27V5h9.5a7 7 0 010 14H8m9 0l8 8" fill="none" stroke="currentColor" strokeWidth="4.2"
+            strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="brand-name">Relay</span>
+        <small>for Sevaro Synapse</small>
+      </div>
+      <nav className="roles" aria-label="Demo role">
+        {ROLES.map(([r, label]) => (
+          <button key={r} className={role === r ? "active" : ""} aria-current={role === r ? "page" : undefined} onClick={() => setRole(r)}>
+            {label}
+            {r === "lead" && pending > 0 && <span className="tab-badge">{pending}</span>}
+          </button>
+        ))}
+      </nav>
+      <div className="asof">
+        <strong>{fmtTime(state.now)} ET</strong>
+        <button className="asof-health" onClick={() => setHealth(true)} title="Data health">
+          <span className={`dot ${dh.stale ? "stale" : "ok"}`} />
+          {dh.stale ? "Feed quiet since" : "Updated"} {fmtTime(dh.data_as_of)}
+          {demoClock && " (demo clock)"}
+        </button>
+      </div>
+      {health && <HealthPanel dh={dh} onClose={() => setHealth(false)} />}
+    </header>
+  );
+}
+
+// Demo controls: move the engine clock, add events, reset. Shown at the bottom of every page.
+export function SimBar({ state, act }: any) {
+  const [adding, setAdding] = useState(false);
+  const clock = state.clock;
   const clockCmd = (body: any, msg?: string) => act(() => post("/api/clock", body), msg);
 
   return (
-    <div className="header">
-      <div className="brand">
-        <div className="brand-mark">R</div>
-        Relay <small>for Sevaro Synapse</small>
-      </div>
-      <div className="roles">
-        <span className="demo-label">Demo role</span>
-        {ROLES.map(([r, label]) => (
-          <button key={r} className={role === r ? "active" : ""} onClick={() => setRole(r)}>
-            {label}
-            {r === "lead" && pending > 0 ? ` (${pending})` : ""}
-          </button>
-        ))}
-      </div>
-      <div className="spacer" />
-      <div className="clock">
-        <button className="btn small" title="Advance the engine clock 1 minute" onClick={() => clockCmd({ action: "advance", minutes: 1 })}>+1 min</button>
-        <button className="btn small" onClick={() => clockCmd({ action: "advance", minutes: 5 })}>+5</button>
-        <button className="btn small" onClick={() => clockCmd({ action: "advance", minutes: 10 })}>+10</button>
+    <div className="simbar">
+      <h2>Simulation controls</h2>
+      <div className="sim-buttons">
+        <button className="btn" title="Advance the engine clock 1 minute" onClick={() => clockCmd({ action: "advance", minutes: 1 })}>+1 min</button>
+        <button className="btn" onClick={() => clockCmd({ action: "advance", minutes: 5 })}>+5 min</button>
+        <button className="btn" onClick={() => clockCmd({ action: "advance", minutes: 10 })}>+10 min</button>
         {clock.mode === "playing" ? (
-          <button className="btn small" onClick={() => clockCmd({ action: "pause" })}>Pause</button>
+          <button className="btn" onClick={() => clockCmd({ action: "pause" })}><SimIcon d="M7 5h3v14H7zM14 5h3v14h-3z" fill /> Pause</button>
         ) : (
-          <button className="btn small" title="Run the clock at 10 times real speed" onClick={() => clockCmd({ action: "play", speed: 10 })}>Play 10x</button>
+          <button className="btn" title="Run the clock at 10 times real speed" onClick={() => clockCmd({ action: "play", speed: 10 })}>
+            <SimIcon d="M7 4.5l12 7.5-12 7.5z" fill /> Play 10x
+          </button>
         )}
         {clock.mode !== "data" && (
-          <button className="btn small" title="Go back to the time of the latest data" onClick={() => clockCmd({ action: "follow_data" }, "Clock follows the data again")}>Live</button>
+          <button className="btn" title="Go back to the time of the latest data" onClick={() => clockCmd({ action: "follow_data" }, "Clock follows the data again")}>Live</button>
         )}
+        <button className="btn" onClick={() => setAdding(true)}>
+          <SimIcon d="M4 6a2 2 0 012-2h12a2 2 0 012 2v13a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 9h16M8 2v4M16 2v4M12 12v6M9 15h6" /> Add events
+        </button>
+        <button
+          className="btn"
+          title="Back to the 6:20 PM kit data"
+          onClick={() => {
+            if (confirm("Reset the demo to the original kit data at 6:20 PM? Uploaded events and offers are cleared.")) {
+              act(() => post("/api/reset"), "Reset to the kit data");
+            }
+          }}
+        >
+          <SimIcon d="M20 12a8 8 0 11-2.3-5.7M20 4v5h-5" /> Reset
+        </button>
       </div>
-      <div className="asof">
-        <strong>{fmtTime(state.now)} ET</strong>
-        <span>
-          <button className="btn ghost small" style={{ padding: 0 }} onClick={() => setHealth(true)}>
-            <span className={`dot ${dh.stale ? "stale" : "ok"}`} /> Data as of {fmtTime(dh.data_as_of)}
-          </button>
-          {clock.mode !== "data" && " (demo clock)"}
-        </span>
-      </div>
-      <button className="btn primary" onClick={() => setAdding(true)}>Add events</button>
-      <button
-        className="btn small"
-        title="Back to the 6:20 PM kit data"
-        onClick={() => {
-          if (confirm("Reset the demo to the original kit data at 6:20 PM? Uploaded events and offers are cleared.")) {
-            act(() => post("/api/reset"), "Reset to the kit data");
-          }
-        }}
-      >
-        Reset
-      </button>
       {adding && <AddEvents onClose={() => setAdding(false)} act={act} state={state} />}
-      {health && <HealthPanel dh={dh} onClose={() => setHealth(false)} />}
     </div>
+  );
+}
+
+function SimIcon({ d, fill }: { d: string; fill?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill={fill ? "currentColor" : "none"}
+      stroke={fill ? "none" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
   );
 }
 

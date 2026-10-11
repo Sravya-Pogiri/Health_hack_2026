@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { post } from "../api";
-import { capitalize, fmtHour, fmtTime, lastName, shortHospital } from "../util";
+import { capitalize, fmtHour, fmtTime, lastName, minutesBetween, SEVERITY_LABEL, shortHospital } from "../util";
 import IssueDrawer from "./IssueDrawer";
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -12,37 +12,31 @@ const SEVERITY_COLOR: Record<string, string> = {
 
 const NO_FLAG_RANK = 1e9;
 const SHIFT_END_SOON_MIN = 60;
+const HOSPITALS_SHOWN = 6;
+const INTERVENTIONS_SHOWN = 3;
 
 export default function Coordinator({ state, act }: any) {
   const [openIssue, setOpenIssue] = useState<string | null>(null);
   const dh = state.data_health;
   const pending = state.summary.pending_approvals;
-  const critical = state.issues.filter((g: any) => g.severity === "critical");
-  const comingUp = state.issues.filter((g: any) => g.severity === "projected");
-  const warnings = state.issues.filter((g: any) => g.severity !== "critical" && g.severity !== "projected");
-  const rowProps = { state, act, open: setOpenIssue };
+  const count = (sev: string) => state.issues.filter((g: any) => g.severity === sev).length;
+  const critical = count("critical");
+  const comingUp = count("projected");
+  const warnings = state.issues.length - critical - comingUp;
 
   return (
-    <div className="lead">
+    <div className="overview">
       {dh.stale && (
         <div className="banner stale">
           No new records for {dh.last_record_minutes_ago} minutes (last at {fmtTime(dh.data_as_of)} ET). Busy doctors may
           have freed up or new consults may be waiting. Check the Synapse feed before acting.
         </div>
       )}
-      <Pulse critical={critical.length} comingUp={comingUp.length} warnings={warnings.length} pending={pending} />
+      <Pulse critical={critical} comingUp={comingUp} warnings={warnings} pending={pending} />
 
-      <div className="section-title">Coverage</div>
-      <CoverageTable state={state} />
-
-      <div className="section-title">
-        Do next ({critical.length}) <span className="hint">click a row for the reasoning</span>
-      </div>
-      <div className="panel qlist">
-        {critical.map((g: any) => <QueueRow key={g.id} group={g} {...rowProps} />)}
-        {critical.length === 0 && <div className="qempty">Nothing critical right now.</div>}
-        <Fold label="Coming up" groups={comingUp} defaultOpen={critical.length === 0} {...rowProps} />
-        <Fold label="Warnings" groups={warnings} defaultOpen={critical.length === 0 && comingUp.length === 0} {...rowProps} />
+      <div className="ov-grid">
+        <CoverageTable state={state} />
+        <Interventions state={state} act={act} open={setOpenIssue} />
       </div>
 
       <DoctorList state={state} />
@@ -51,13 +45,12 @@ export default function Coordinator({ state, act }: any) {
   );
 }
 
-// Four tiles in the same style as the Clinical lead page.
 function Pulse({ critical, comingUp, warnings, pending }: any) {
   const tiles = [
-    { n: critical, label: `critical item${critical === 1 ? "" : "s"} to act on`, tone: critical ? "critical" : "ok" },
-    { n: comingUp, label: `item${comingUp === 1 ? "" : "s"} coming up`, tone: comingUp ? "projected" : "ok" },
-    { n: warnings, label: `warning${warnings === 1 ? "" : "s"} to watch`, tone: warnings ? "warning" : "ok" },
-    { n: pending, label: "waiting on the clinical lead", tone: pending ? "projected" : "info" },
+    { n: critical, label: critical === 1 ? "Critical issue" : "Critical issues", tone: critical ? "critical" : "ok" },
+    { n: comingUp, label: comingUp === 1 ? "Upcoming risk" : "Upcoming risks", tone: comingUp ? "warning" : "ok" },
+    { n: warnings, label: warnings === 1 ? "Warning" : "Warnings", tone: warnings ? "warning" : "ok" },
+    { n: pending, label: "Awaiting approval", tone: pending ? "projected" : "info" },
   ];
   return (
     <div className="pulse">
@@ -89,16 +82,36 @@ function onActivate(fn: () => void) {
   };
 }
 
+
+function Arrow() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ShortMark() {
+  return (
+    <svg className="short-mark" width="18" height="18" viewBox="0 0 20 20" aria-label="Short">
+      <circle cx="10" cy="10" r="9" fill="currentColor" />
+      <path d="M10 5.5v5.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="10" cy="14.3" r="1.3" fill="#fff" />
+    </svg>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
-// Coverage: one row per hospital, "now" plus the next three whole hours.
+// Hospital coverage: one row per hospital, "now" plus the next three whole hours.
 // ---------------------------------------------------------------------------------------------
 
 function CoverageTable({ state }: any) {
+  const [all, setAll] = useState(false);
   const names: Record<string, string> = {};
   for (const p of state.physicians) names[p.id] = lastName(p.name);
 
-  const now = new Date(state.now).getTime();
   const times: string[] = state.projection?.times || [];
+  const now = new Date(state.now).getTime();
   const cols: number[] = [];
   times.forEach((t, i) => {
     const d = new Date(t);
@@ -112,35 +125,52 @@ function CoverageTable({ state }: any) {
       if (!flags[hid] || g.rank < flags[hid].rank) flags[hid] = { rank: g.rank, severity: g.severity };
     }
   }
-  const hospitals = [...state.hospitals].sort(
-    (a: any, b: any) => (flags[a.id]?.rank ?? NO_FLAG_RANK) - (flags[b.id]?.rank ?? NO_FLAG_RANK),
-  );
+  // Then hospitals that go short later, so a projected gap is never hidden behind "View all".
+  const shortLater = (h: any) => cols.some((i) => (state.projection?.hospitals?.[h.id]?.[i]?.short || 0) > 0);
+  const order = (h: any) => flags[h.id]?.rank ?? (shortLater(h) ? NO_FLAG_RANK - 1 : NO_FLAG_RANK);
+  const hospitals = [...state.hospitals].sort((a: any, b: any) => order(a) - order(b));
+  const shown = all ? hospitals : hospitals.slice(0, HOSPITALS_SHOWN);
 
   return (
-    <div className="panel cov">
+    <section className="card cov-card">
+      <div className="card-head">
+        <h2>Hospital coverage</h2>
+        <p>On shift / required <span className="sep">•</span> Free doctors shown separately</p>
+      </div>
       <div className="cov-scroll">
-        <table className="cov-grid cov-hosp">
+        <table className="cov-table">
           <thead>
             <tr>
-              <th />
-              <th>Now</th>
-              {cols.map((i) => <th key={i}>{fmtHour(times[i])}</th>)}
+              <th className="h">Hospital</th>
+              <th className="now">Now</th>
+              {cols.map((i) => (
+                <th key={i}>
+                  {fmtHour(times[i])}
+                  <small>+{minutesBetween(state.now, times[i])} min</small>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {hospitals.map((h: any) => (
+            {shown.map((h: any) => (
               <CoverageRow key={h.id} h={h} flag={flags[h.id]} cols={cols}
                 series={state.projection?.hospitals?.[h.id] || []} names={names} />
             ))}
           </tbody>
         </table>
       </div>
-      <div className="cov-legend muted small">
-        <span><i className="sw short" />Short</span>
-        <span><i className="sw ok" />Covered</span>
-        <span>Cells show credentialed doctors on shift / needed. Click a hospital to see who is free.</span>
+      <div className="card-foot">
+        <span className="legend">
+          <span><i className="sw covered" />Covered</span>
+          <span><i className="sw short" />Short</span>
+        </span>
+        {hospitals.length > HOSPITALS_SHOWN && (
+          <button className="link" onClick={() => setAll(!all)}>
+            {all ? "Show fewer hospitals" : `View all ${hospitals.length} hospitals`} <Arrow />
+          </button>
+        )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -149,31 +179,35 @@ function CoverageRow({ h, flag, cols, series, names }: any) {
   const toggle = () => setOpen(!open);
   const busy = h.staffed_ids.filter((id: string) => !h.free_ids.includes(id));
   const list = (ids: string[]) => ids.map((id) => names[id] || id).join(", ");
+  const shortNow = h.staffed_now < h.required_now;
   return (
     <Fragment>
-      <tr className="cov-row" tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={onActivate(toggle)}>
+      <tr className="cov-row" tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={onActivate(toggle)}
+        title="Click to see who is free">
         <th scope="row">
           <span className="cv-name" title={h.name}>
-            <span className="sdot" style={{ background: flag ? SEVERITY_COLOR[flag.severity] : "transparent" }} />
+            {flag && <span className="sdot" style={{ background: SEVERITY_COLOR[flag.severity] }} />}
             <span className="n">{shortHospital(h.name)}</span>
             {h.surge.active && (
-              <span className="chip warning tiny" title={`${h.surge.trailing_count} consults in the last hour; normal busy level is ${h.surge.p90}`}>
+              <span className="chip surge" title={`${h.surge.trailing_count} consults in the last hour; normal busy level is ${h.surge.p90}`}>
                 Surge
               </span>
             )}
-            <span className="cv-chev"><Chevron open={open} /></span>
           </span>
         </th>
-        <td className={`now ${h.staffed_now < h.required_now ? "short" : "ok"}`}>
-          {h.staffed_now}/{h.required_now}
-          <span className={`cv-free ${h.free_now === 0 ? "none" : ""}`}>{h.free_now} free</span>
+        <td className={`now ${shortNow ? "short" : ""}`}>
+          <b>{h.staffed_now} / {h.required_now}</b>
+          <small className={h.free_now === 0 ? "none" : ""}>{h.free_now} free</small>
+          {shortNow && <ShortMark />}
         </td>
         {cols.map((i: number) => {
           const p = series[i];
-          return p ? (
-            <td key={i} className={p.short > 0 ? "short" : "ok"}>{p.staffed}/{p.required}</td>
-          ) : (
-            <td key={i} />
+          if (!p) return <td key={i} />;
+          return (
+            <td key={i} className={p.short > 0 ? "short" : ""}>
+              {p.staffed} / {p.required}
+              {p.short > 0 && <ShortMark />}
+            </td>
           );
         })}
       </tr>
@@ -201,7 +235,7 @@ function CoverageRow({ h, flag, cols, series, names }: any) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Action queue
+// Priority interventions: ranked, one open at a time.
 // ---------------------------------------------------------------------------------------------
 
 export function actionFor(opt: any, issue: any) {
@@ -232,138 +266,118 @@ export function actionFor(opt: any, issue: any) {
   }
 }
 
-function Fold({ label, groups, defaultOpen, ...rowProps }: any) {
-  const [open, setOpen] = useState(!!defaultOpen);
-  if (groups.length === 0) return null;
-  const toggle = () => setOpen(!open);
+function Interventions({ state, act, open }: any) {
+  const groups = state.issues;
+  const [expanded, setExpanded] = useState<string | null>(groups[0]?.id ?? null);
+  const [all, setAll] = useState(false);
+  const current = groups.some((g: any) => g.id === expanded) ? expanded : null;
+  const shown = all ? groups : groups.slice(0, INTERVENTIONS_SHOWN);
+
   return (
-    <>
-      <button className="fold" aria-expanded={open} onClick={toggle}>
-        <Chevron open={open} /> {label} ({groups.length})
-      </button>
-      {open && groups.map((g: any) => <QueueRow key={g.id} group={g} {...rowProps} />)}
-    </>
+    <section className="card iv-card">
+      <div className="card-head row">
+        <h2>Priority interventions</h2>
+        <span className="count">{groups.length}</span>
+      </div>
+      {groups.length === 0 && <div className="qempty">Nothing needs attention right now.</div>}
+      <div className="iv-list">
+        {shown.map((g: any) => (
+          <Intervention key={g.id} group={g} state={state} act={act} open={open}
+            expanded={current === g.id} toggle={() => setExpanded(current === g.id ? null : g.id)} />
+        ))}
+      </div>
+      {groups.length > INTERVENTIONS_SHOWN && (
+        <button className="link iv-all" onClick={() => setAll(!all)}>
+          {all ? "Show top priorities only" : "View all interventions"} <Arrow />
+        </button>
+      )}
+    </section>
   );
 }
 
-function QueueRow({ group, state, act, open }: any) {
-  const [expanded, setExpanded] = useState(false);
-  const toggle = () => setExpanded(!expanded);
+function Intervention({ group, state, act, open, expanded, toggle }: any) {
   const issue = group.issues.find((i: any) => i.id === group.primary_issue_id) || group.issues[0];
   const plan = issue.what_to_do;
   const primary = plan?.primary;
   const action = primary ? actionFor(primary, issue) : null;
   const linkedPlan = issue.plan_id ? state.plans.find((p: any) => p.id === issue.plan_id) : null;
-  const others = group.issues.filter((i: any) => i.id !== issue.id);
   const where = issue.where || {};
-  const whereText = [where.hospital_name, where.consult_id, where.physician_name].filter(Boolean).join(" · ");
+  const related = group.issues.length - 1;
 
-  // "Harbor Regional: Stroke consult ..." -> bold place, then the problem.
+  // "Harbor Regional: Stroke consult ..." -> place, then the problem.
   const cut = group.title.indexOf(": ");
-  const place = cut > 0 ? group.title.slice(0, cut) : "";
-  const problem = cut > 0 ? group.title.slice(cut + 2) : group.title;
+  const place = shortHospital(cut > 0 ? group.title.slice(0, cut) : where.hospital_name || where.physician_name || "");
+  const problem = capitalize(cut > 0 ? group.title.slice(cut + 2) : group.title);
+  const sev = group.severity;
+
+  if (!expanded) {
+    return (
+      <button className="iv-row" onClick={toggle} aria-expanded={false}>
+        <span className={`iv-dot ${sev}`} />
+        <span className="iv-row-text">
+          <span className="iv-place">{place}</span>
+          <b>{problem}</b>
+        </span>
+        {issue.acknowledged_at && <span className="chip ok">Acknowledged</span>}
+        <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" className="iv-go">
+          <path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
-    <div className="qitem">
-      <div className="qrow" style={{ borderLeftColor: SEVERITY_COLOR[group.severity] || SEVERITY_COLOR.info }}>
-        <span className="risk-where" title={place}>{shortHospital(place || where.hospital_name || where.physician_name || "")}</span>
-        <div className="qmain" role="button" tabIndex={0} aria-expanded={expanded} onClick={toggle} onKeyDown={onActivate(toggle)}>
-          <div className="qtitle">
-            <span>{capitalize(problem)}</span>
-            {issue.acknowledged_at && <span className="chip ok" style={{ marginLeft: 8 }}>Acknowledged</span>}
-          </div>
-          {primary && <div className="qaction" title={primary.label}>{primary.label}</div>}
-        </div>
-        {linkedPlan ? (
-          <span className="chip accent qplan" title={`Plan ${linkedPlan.id}: ${planStatus(linkedPlan)}`}>
-            {planStatus(linkedPlan)}
-          </span>
-        ) : (
-          action && (
-            <button className="btn small" title={(action as any).hint} onClick={() => act(action.call, action.done)}>{action.short}</button>
-          )
-        )}
-        <button className="qchev" aria-label={expanded ? "Hide reasoning" : "Show reasoning"} onClick={toggle}>
-          <Chevron open={expanded} />
-        </button>
+    <div className={`iv-open ${sev}`}>
+      <div className="iv-top">
+        <span className={`iv-dot ${sev}`} />
+        <span className={`chip ${sev}`}>{SEVERITY_LABEL[sev] || "Info"}</span>
+        {group.stroke && <span className="chip stroke">Stroke</span>}
+        {place && <><span className="bar" /> <span className="iv-where">{place}</span></>}
+        {issue.acknowledged_at && <span className="chip ok">Acknowledged</span>}
+        <button className="iv-collapse" aria-label="Collapse" onClick={toggle}><Chevron open /></button>
       </div>
-      {expanded && (
-        <div className="qdetail">
-          <dl className="qdl">
-            <dt>What</dt>
-            <dd>{issue.what}</dd>
-            <dt>Why</dt>
-            <dd>{issue.why}</dd>
-            {primary && (
-              <>
-                <dt>Fix</dt>
-                <dd>
-                  {primary.label}
-                  {primary.why && <div className="muted small">{primary.why}</div>}
-                  {primary.warnings?.length > 0 && <div className="warn-text">{primary.warnings.join(" ")}</div>}
-                </dd>
-                <dt>Approver</dt>
-                <dd>
-                  {primary.approver_label}
-                  {primary.eta_minutes ? ` · help in about ${primary.eta_minutes} min` : ""}
-                </dd>
-              </>
-            )}
-            {whereText && (
-              <>
-                <dt>Where</dt>
-                <dd>{whereText}</dd>
-              </>
-            )}
-            {linkedPlan && (
-              <>
-                <dt>Plan</dt>
-                <dd>{linkedPlan.id}: {planStatus(linkedPlan)}</dd>
-              </>
-            )}
-            {plan?.also_now?.length > 0 && (
-              <>
-                <dt>Also now</dt>
-                <dd>
-                  {plan.also_now.map((o: any, i: number) => {
-                    const a = actionFor(o, issue);
-                    return (
-                      <div key={i} className="qalso">
-                        <span>{o.label}</span>
-                        <button className="btn small" onClick={() => act(a.call, a.done)}>{a.short}</button>
-                      </div>
-                    );
-                  })}
-                </dd>
-              </>
-            )}
-            {others.length > 0 && (
-              <>
-                <dt>Related</dt>
-                <dd>
-                  {others.map((o: any) => (
-                    <div key={o.id} className="qalso">
-                      <span>
-                        <span className="sdot" style={{ background: SEVERITY_COLOR[o.severity] || SEVERITY_COLOR.info, marginRight: 8 }} />
-                        {o.what}
-                      </span>
-                      <button className="btn ghost small" onClick={() => open(o.id)}>Details</button>
-                    </div>
-                  ))}
-                </dd>
-              </>
-            )}
-          </dl>
-          <div className="qdetail-actions">
-            <button className="btn small" onClick={() => open(issue.id)}>Full details and why not</button>
-            {!issue.acknowledged_at && !(action as any)?.ack && (
-              <button className="btn ghost small" onClick={() => act(() => post(`/api/issues/${issue.id}/ack`), "Acknowledged")}>
-                Acknowledge
-              </button>
-            )}
+      <h3>{problem}</h3>
+      <p className="iv-what">{issue.what}</p>
+      {primary && (
+        <div className="iv-rec">
+          <div className="iv-rec-k">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0012 3z" /></svg>
+            Recommended action
           </div>
+          <div className="iv-rec-v">{primary.label}</div>
+          {primary.warnings?.length > 0 && <div className="warn-text">{primary.warnings.join(" ")}</div>}
         </div>
       )}
+      <div className="iv-actions">
+        {linkedPlan ? (
+          <span className="chip accent big" title={`Plan ${linkedPlan.id}`}>{capitalize(planStatus(linkedPlan))}</span>
+        ) : (
+          action && (
+            <button className="btn primary big" title={(action as any).hint} onClick={() => act(action.call, action.done)}>
+              {action.label}
+            </button>
+          )
+        )}
+        <button className="link underline" onClick={() => open(issue.id)}>View reasoning</button>
+        {!issue.acknowledged_at && !(action as any)?.ack && (
+          <button className="link muted-link" onClick={() => act(() => post(`/api/issues/${issue.id}/ack`), "Acknowledged")}>Acknowledge</button>
+        )}
+      </div>
+      {plan?.also_now?.length > 0 && (
+        <div className="iv-also">
+          {plan.also_now.map((o: any, i: number) => {
+            const a = actionFor(o, issue);
+            return (
+              <div key={i} className="qalso">
+                <span><span className="muted">Also now:</span> {o.label}</span>
+                <button className="btn small" onClick={() => act(a.call, a.done)}>{a.short}</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {related > 0 && <div className="iv-related muted small">{related} related item{related === 1 ? "" : "s"} in the reasoning.</div>}
     </div>
   );
 }
@@ -378,7 +392,7 @@ export function planStatus(p: any): string {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Doctors on shift: one row each, reasoning on click.
+// Doctors on shift: a compact strip, with the full roster (and the reasons) on demand.
 // ---------------------------------------------------------------------------------------------
 
 type Tone = "free" | "busy" | "check" | "out";
@@ -400,7 +414,10 @@ function doctorTone(p: any): Tone {
 
 const TONE_ORDER: Record<Tone, number> = { free: 0, check: 1, busy: 2, out: 3 };
 
+const PILL_LABEL: Record<Tone, string> = { free: "Available", busy: "Busy", check: "Check", out: "Unavailable" };
+
 function DoctorList({ state }: any) {
+  const [roster, setRoster] = useState(false);
   const [showOff, setShowOff] = useState(false);
   const docs = state.physicians.filter((p: any) => p.on_shift || state.joins.some((j: any) => j.physician_id === p.id));
   const off = state.physicians.filter((p: any) => !docs.includes(p));
@@ -408,33 +425,52 @@ function DoctorList({ state }: any) {
   const sorted = [...docs].sort((a: any, b: any) => TONE_ORDER[doctorTone(a)] - TONE_ORDER[doctorTone(b)]);
 
   return (
-    <>
-      <div className="section-title">Doctors on shift</div>
-      <div className="panel">
-        <table className="dr">
-          <thead>
-            <tr><th>Doctor</th><th>Status</th><th>Doing</th><th>Ends</th><th>Consults</th></tr>
-          </thead>
-          <tbody>
-            {sorted.map((p: any) => <DoctorRow key={p.id} p={p} />)}
-          </tbody>
-        </table>
+    <section className="card dr-card">
+      <div className="card-head row">
+        <h2>Doctors on shift</h2>
+        <span className="count">{docs.length}</span>
+        <button className="link push" onClick={() => setRoster(!roster)} aria-expanded={roster}>
+          {roster ? "Hide roster" : "View roster"} <Arrow />
+        </button>
       </div>
-      <div className="cov-legend muted small">
-        {(["free", "busy", "check", "out"] as Tone[]).map((t) => (
-          <span key={t}><span className="sdot" style={{ background: TONE_COLOR[t], marginRight: 5 }} />{t}</span>
-        ))}
-        <span>Click a doctor for the reason.</span>
-      </div>
-      {off.length > 0 && (
-        <div className="offshift">
-          <button className="fold inline" aria-expanded={showOff} onClick={() => setShowOff(!showOff)}>
-            <Chevron open={showOff} /> Off shift ({off.length})
-          </button>
-          {showOff && <span className="muted small"> {off.map((p: any) => lastName(p.name)).join(", ")}</span>}
+      {!roster && (
+        <div className="dr-strip">
+          {sorted.map((p: any) => {
+            const tone = doctorTone(p);
+            return (
+              <div key={p.id} className="dr-chip" title={p.verdict.reason}>
+                <span className="dr-name">{p.name}</span>
+                <span className={`pill ${tone}`}>{tone === "check" ? p.verdict.label.replace(/\s*\(.*\)$/, "") : PILL_LABEL[tone]}</span>
+              </div>
+            );
+          })}
         </div>
       )}
-    </>
+      {roster && (
+        <>
+          <table className="dr">
+            <thead>
+              <tr><th>Doctor</th><th>Status</th><th>Doing</th><th>Ends</th><th>Consults</th></tr>
+            </thead>
+            <tbody>
+              {sorted.map((p: any) => <DoctorRow key={p.id} p={p} />)}
+            </tbody>
+          </table>
+          <div className="dr-foot muted small">
+            Click a doctor for the reason.
+            {off.length > 0 && (
+              <>
+                {" "}
+                <button className="fold inline" aria-expanded={showOff} onClick={() => setShowOff(!showOff)}>
+                  <Chevron open={showOff} /> Off shift ({off.length})
+                </button>
+                {showOff && <span> {off.map((p: any) => lastName(p.name)).join(", ")}</span>}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 

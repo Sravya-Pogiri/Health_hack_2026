@@ -14,7 +14,7 @@ export default function InsightsView({ state, act }: any) {
   }, [state.now, state.data_health.events_loaded]);
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <div>
       <div className="section-title">Replay scoreboard: when would Relay have seen it?</div>
       <div className="panel" style={{ padding: "14px 18px" }}>
         {!score && <p className="muted">Replaying the day every 5 minutes...</p>}

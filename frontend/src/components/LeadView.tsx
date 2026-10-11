@@ -38,7 +38,7 @@ export default function LeadView({ state, act }: any) {
         </Card>
       </div>
 
-      <Card title="Coverage outlook" sub="Every hospital over the next few hours, the ones that go short first. On shift / required, every 15 minutes.">
+      <Card title="Coverage outlook" sub="Hospitals that go short in the next few hours. On shift / required, every 15 minutes.">
         <CoverageGrid state={state} />
       </Card>
 
@@ -268,15 +268,16 @@ function CoverageGrid({ state }: any) {
   const all = state.hospitals.map((h: any) => ({ h, pts: state.projection.hospitals[h.id] || [] }));
   // Keep hospitals an approved doctor is joining for, so the filled gap shows up green.
   const joinedFor = new Set(state.joins.flatMap((j: any) => j.hospitals || []));
-  // Every hospital: the ones that go short (or that an approved doctor is joining for) first, soonest gap first.
-  const flagged = (x: any) => x.pts.some((p: any) => p.short > 0) || joinedFor.has(x.h.id);
-  const rows = [...all].sort((a: any, b: any) =>
-    Number(flagged(b)) - Number(flagged(a)) || firstShort(a.pts) - firstShort(b.pts));
-  const shortCount = all.filter((x: any) => x.pts.some((p: any) => p.short > 0)).length;
+  const short = all.filter((x: any) => x.pts.some((p: any) => p.short > 0) || joinedFor.has(x.h.id))
+    .sort((a: any, b: any) => firstShort(a.pts) - firstShort(b.pts));
+  const fine = all.length - short.length;
   const joiners = new Set(state.joins.map((j: any) => j.physician_id));
   const names: Record<string, string> = {};
   state.physicians.forEach((p: any) => (names[p.id] = p.name));
 
+  if (short.length === 0) {
+    return <div className="panel quiet"><b>Every hospital is covered</b> <span className="muted">through {fmtTime(times[times.length - 1])}.</span></div>;
+  }
   return (
     <div className="panel cov">
       <div className="cov-scroll">
@@ -288,7 +289,7 @@ function CoverageGrid({ state }: any) {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ h, pts }: any) => (
+            {short.map(({ h, pts }: any) => (
               <tr key={h.id}>
                 <th>{shortHospital(h.name)}{h.surge?.active && <span className="chip warning tiny">Surge</span>}</th>
                 {pts.map((p: any) => {
@@ -310,10 +311,7 @@ function CoverageGrid({ state }: any) {
         <span><i className="sw short" />Short</span>
         <span><i className="sw helped" />Covered by an approved offer</span>
         <span><i className="sw ok" />Covered</span>
-        <span>
-          Cells show credentialed doctors on shift / needed.{" "}
-          {shortCount === 0 ? `Every hospital is covered through ${fmtTime(times[times.length - 1])}.` : `${shortCount} of ${all.length} hospitals go short.`}
-        </span>
+        <span>Cells show credentialed doctors on shift / needed. {fine} other hospital{fine === 1 ? " is" : "s are"} covered the whole time.</span>
       </div>
     </div>
   );

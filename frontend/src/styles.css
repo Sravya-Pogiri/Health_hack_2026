@@ -697,3 +697,16 @@ table.t.boxed .findings ul { margin: 6px 0 0; padding-left: 16px; }
 .playing-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: 0.25; } }
 .sim-buttons .btn.playing { background: var(--warning-soft); border-color: #f3d29c; color: var(--warning); font-weight: 600; }
+
+/* Clinical lead: upcoming approvals, one card per offer */
+.upcoming { display: grid; gap: 8px; }
+.upcoming-intro { margin: 0 0 2px; font-size: 14px; }
+.upcoming-item { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; display: grid; gap: 5px; }
+.upcoming-item.escalate_lead { border-left-color: var(--critical); }
+.upcoming-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.upcoming-who { font-size: 15px; }
+.upcoming-line { display: flex; gap: 10px; font-size: 13.5px; line-height: 1.45; }
+.upcoming-line .k { flex: none; width: 52px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.fix-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.fix { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 12.5px; }
+.fix.stroke { background: var(--critical-soft); border-color: var(--critical-line); }

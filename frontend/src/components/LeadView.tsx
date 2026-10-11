@@ -30,7 +30,7 @@ export default function LeadView({ state, act }: any) {
           <div className="card-body stack">
             {pending.map((p: any) => <Approval key={p.id} plan={p} state={state} act={act} issues={issues} />)}
             {escalations.map((a: any) => <Escalation key={a.id} a={a} issues={issues} act={act} />)}
-            {decisions === 0 && <NothingYet issues={issues} />}
+            {decisions === 0 && <NothingYet issues={issues} state={state} />}
           </div>
         </Card>
         <Card title="Stroke care at risk now" count={strokeRows.length} sub="Stroke consults past their time limit. Click one for the reason.">
@@ -235,28 +235,53 @@ function Escalation({ a, issues, act }: any) {
   );
 }
 
-function NothingYet({ issues }: any) {
-  // Fixes that will need the lead's approval once the coordinator proposes them.
+function NothingYet({ issues, state }: any) {
+  // Fixes that will need the lead's approval once the coordinator proposes them, one card per offer.
   const coming = issues.filter((i: any) => i.what_to_do?.primary?.approver === "clinical_lead" && !i.plan_id
     && ["split_shift", "start_early", "escalate_lead"].includes(i.what_to_do.primary.kind));
+  const groups: { p: any; fixes: any[] }[] = [];
+  for (const i of coming) {
+    const p = i.what_to_do.primary;
+    const g = groups.find((x) => x.p.label === p.label);
+    if (g) g.fixes.push(i);
+    else groups.push({ p, fixes: [i] });
+  }
+  const names: Record<string, string> = {};
+  state.physicians.forEach((d: any) => (names[d.id] = d.name));
+
   return (
-    <div className="panel quiet">
-      <b>Nothing needs your decision right now.</b>
-      {coming.length > 0 ? (
-        <>
-          <span className="muted"> These will come to you once the coordinator proposes them:</span>
-          <ul>
-            {coming.slice(0, 4).map((i: any) => (
-              <li key={i.id}>
-                <b>{i.where?.hospital_name ? shortHospital(i.where.hospital_name) : "Network"}</b>:{" "}
-                {i.what_to_do.primary.kind === "escalate_lead" ? `${lower(i.title)}, and no off-duty doctor qualifies, so it will be escalated to you` : i.what_to_do.primary.label}
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <span className="muted"> Offers and escalations will appear here.</span>
-      )}
+    <div className="upcoming">
+      <p className="upcoming-intro">
+        <b>Nothing needs your decision right now.</b>{" "}
+        <span className="muted">{groups.length ? "These will come to you once the coordinator proposes them:" : "Offers and escalations will appear here."}</span>
+      </p>
+      {groups.map(({ p, fixes }) => {
+        const offer = p.detail?.offer;
+        const who = p.physician_id ? names[p.physician_id] : "";
+        const kind = p.kind === "start_early" ? "Early start" : p.kind === "split_shift" ? "Split shift" : "Escalation";
+        return (
+          <div key={p.label} className={`upcoming-item ${p.kind}`}>
+            <div className="upcoming-top">
+              <span className={`chip ${p.kind === "escalate_lead" ? "critical" : "accent"}`}>{kind}</span>
+              {who && <b className="upcoming-who">{who}</b>}
+              {p.kind === "start_early" && <span className="muted">starts now, {p.detail?.minutes_early} min early</span>}
+              {offer && <span className="muted">{offer.label.replace(" ET", "")}</span>}
+            </div>
+            {p.kind === "escalate_lead" && <div className="upcoming-line">No off-duty doctor qualifies, so the coordinator will escalate it to you.</div>}
+            {offer && <div className="upcoming-line"><span className="k">Covers</span>{offer.hospitals.map((h: any) => shortHospital(h.name)).join(", ")}</div>}
+            <div className="upcoming-line">
+              <span className="k">Fixes</span>
+              <span className="fix-list">
+                {fixes.map((i: any) => (
+                  <span key={i.id} className={`fix ${i.stroke ? "stroke" : ""}`}>
+                    <b>{i.where?.hospital_name ? shortHospital(i.where.hospital_name) : "Network"}</b> {lower(i.title)}
+                  </span>
+                ))}
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

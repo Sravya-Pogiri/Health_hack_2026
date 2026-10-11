@@ -44,58 +44,7 @@
   font-feature-settings: "cv11", "ss01";
   color: var(--ink);
   background: var(--bg);
-  color-scheme: light;
-}
-
-:root[data-theme="dark"] {
-  --bg: #0a0f1c;
-  --panel: #111a2b;
-  --panel-2: #152034;
-  --hover: #18243a;
-  --ink: #e6ebf2;
-  --muted: #9aa7b8;
-  --faint: #66748a;
-  --line: #1f2b40;
-  --line-strong: #2f3d56;
-  --accent: #2dd4bf;
-  --accent-strong: #2dd4bf;
-  --accent-soft: rgba(45, 212, 191, 0.12);
-  --on-accent: #042f2b;
-  --critical: #f87171;
-  --critical-soft: rgba(248, 113, 113, 0.14);
-  --warning: #fbbf24;
-  --warning-soft: rgba(251, 191, 36, 0.13);
-  --projected: #8ea6ff;
-  --projected-soft: rgba(142, 166, 255, 0.14);
-  --info: #94a3b8;
-  --info-soft: rgba(148, 163, 184, 0.13);
-  --ok: #4ade80;
-  --ok-soft: rgba(74, 222, 128, 0.13);
-  --stroke-bg: #e2e8f0;
-  --stroke-ink: #0f172a;
-  --side-bg: #070b15;
-  --side-line: #151e2f;
-  --overlay: rgba(0, 0, 0, 0.6);
-  --toast-bg: #e6ebf2;
-  --toast-ink: #0f172a;
-  --phone-frame: #000000;
-  --phone-bg: #0f1726;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
-  color-scheme: dark;
-}
-
-/* The standalone offer page has no theme switch: it follows the phone's setting. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --bg: #0a0f1c; --panel: #111a2b; --panel-2: #152034; --hover: #18243a; --ink: #e6ebf2; --muted: #9aa7b8;
-    --faint: #66748a; --line: #1f2b40; --line-strong: #2f3d56; --accent: #2dd4bf; --accent-strong: #2dd4bf;
-    --accent-soft: rgba(45, 212, 191, 0.12); --on-accent: #042f2b; --critical: #f87171;
-    --critical-soft: rgba(248, 113, 113, 0.14); --warning: #fbbf24; --warning-soft: rgba(251, 191, 36, 0.13);
-    --ok: #4ade80; --ok-soft: rgba(74, 222, 128, 0.13); --phone-bg: #0f1726; --toast-bg: #e6ebf2; --toast-ink: #0f172a;
-    color-scheme: dark;
-  }
+  color-scheme: light only;
 }
 
 * { box-sizing: border-box; }
@@ -159,11 +108,6 @@ a { color: var(--accent); }
   70% { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0); }
   100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
 }
-.theme-toggle {
-  display: flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 9px; border: 0; background: transparent;
-  color: var(--side-muted); font-size: 13px;
-}
-.theme-toggle:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
 .sidebar-note { display: flex; gap: 8px; margin: 2px 4px 0; font-size: 11.5px; line-height: 1.4; color: var(--side-muted); }
 .sidebar-note .icon { margin-top: 1px; }
 
@@ -208,7 +152,7 @@ a { color: var(--accent); }
     padding: 10px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--side-line);
   }
   .brand { padding: 0 4px 0 0; }
-  .brand-text small, .nav-label, .sidebar-note, .theme-toggle span, .feed-text span { display: none; }
+  .brand-text small, .nav-label, .sidebar-note, .feed-text span { display: none; }
   .nav { display: flex; gap: 2px; }
   .nav-item { padding: 7px 10px; }
   .nav-item.active::before { display: none; }

@@ -563,3 +563,103 @@ input.i, select.i, textarea.i { width: 100%; padding: 7px 9px; border: 1px solid
 .cov-row.open > th { box-shadow: inset 3px 0 0 var(--accent); }
 .cov-row.open .cv-name .n { color: var(--accent); }
 .hint-click { color: var(--accent); }
+
+/* ---------------------------------------------------------------------------------------------
+   Shared card pieces used by every tab (same look as the Coordinator)
+   --------------------------------------------------------------------------------------------- */
+.card-head.titled { display: flex; align-items: flex-start; gap: 12px; }
+.card-titles { min-width: 0; flex: 1; }
+.card-title-row { display: flex; align-items: center; gap: 10px; }
+.card-head.titled .push { margin-left: auto; flex: none; }
+.card-body { padding: 0 18px 16px; }
+.card-body.stack { display: grid; gap: 10px; }
+.ov-grid.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .ov-grid.even { grid-template-columns: 1fr; } }
+.sub-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 8px; }
+
+/* Panels placed inside a card lose their own frame */
+.card .panel { border: 0; box-shadow: none; border-radius: 0; background: transparent; }
+.card .panel.quiet { padding: 0; font-size: 14px; line-height: 1.5; }
+.card .panel.quiet ul { margin-top: 6px; }
+.card .panel.cov { padding: 0 18px 14px; }
+.card > .panel.quiet { padding: 0 18px 16px; }
+
+/* Decision cards inside "Needs your decision" and audit records */
+.card .approval { margin: 0; box-shadow: none; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card .lead-approval { border-left: 4px solid var(--accent); background: #f7fbfb; }
+.card .approval h3, .card .lead-approval h3 { font-size: 17px; margin: 8px 0 10px; }
+.card .approval .buttons { margin-top: 12px; }
+.card .facts span { font-size: 11px; }
+.card .facts > div { padding: 7px 10px; }
+.card .facts b { font-size: 14px; }
+.card .why-now { font-size: 14px; }
+.card .record { border-left: 4px solid var(--line-strong); background: var(--panel); }
+
+/* Stroke risk and decided rows as bordered list items */
+.card .risk { padding: 0 14px 12px; display: grid; gap: 7px; }
+.card .risk-row { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.card .risk-row:last-child { border-bottom: 1px solid var(--line); }
+.card .risk-main {
+  grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-areas: "dot where time" "dot what owner";
+  column-gap: 12px; row-gap: 1px; padding: 8px 14px; align-items: center;
+}
+.card .risk-main .iv-dot { grid-area: dot; }
+.card .risk-where { grid-area: where; grid-column: auto; font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.card .risk-what { grid-area: what; font-weight: 600; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .risk-time { grid-area: time; font-size: 13.5px; }
+.card .risk-owner { grid-area: owner; }
+.card .risk-detail { padding: 0 14px 10px 36px; font-size: 13.5px; }
+.card .risk-row.static { padding: 10px 14px; font-size: 14px; }
+
+/* Coverage outlook grid in the coordinator colors */
+.cov-grid th { font-size: 11.5px; font-weight: 500; }
+.cov-grid tbody th { font-size: 13.5px; font-weight: 600; }
+.cov-grid td { padding: 5px 2px; border-radius: 5px; }
+.cov-grid td.ok { background: var(--accent-soft); color: var(--muted); }
+.cov-grid td.short { background: var(--critical-soft); color: var(--critical); box-shadow: inset 0 0 0 1px var(--critical-line); }
+.cov-legend { font-size: 12.5px; gap: 18px; margin-top: 10px; }
+.cov-legend .sw { width: 13px; height: 13px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+.cov-legend .sw.ok { background: var(--accent-soft); }
+.cov-legend .sw.short { background: var(--critical-soft); box-shadow: inset 0 0 0 1px var(--critical-line); }
+.cov-legend .sw.helped { background: var(--ok-soft); box-shadow: inset 0 0 0 1px #9fd8b0; }
+.cov-grid td.helped { background: var(--ok-soft); color: var(--ok); }
+
+/* Doctor phone */
+.phone-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; align-items: start; }
+@media (max-width: 1000px) { .phone-layout { grid-template-columns: 1fr; } }
+.iv-list.flush { padding: 0; }
+.iv-row.selected { border-color: var(--accent); background: var(--accent-soft); }
+.iv-dot.ok { background: #22a35a; }
+.phone-note { margin: 12px 0 0; }
+.phone-stage { display: flex; justify-content: center; padding: 6px 18px 22px; background: linear-gradient(var(--panel), var(--panel-2)); border-radius: 0 0 var(--radius) var(--radius); }
+.phone { width: 340px; min-height: 640px; border-radius: 40px; background: #0f172a; padding: 12px; box-shadow: 0 16px 40px rgba(15, 29, 58, 0.18); }
+.phone-screen { background: #fff; border-radius: 30px; min-height: 616px; padding: 26px 18px 18px; }
+.phone-empty { margin: auto 0; display: grid; gap: 8px; text-align: center; color: var(--muted); font-size: 14px; padding: 0 16px; }
+.phone-empty b { color: var(--ink); font-size: 16px; }
+.countdown { color: var(--accent); }
+
+/* Insights */
+.headlines { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 15px; line-height: 1.45; }
+.headlines li::marker { color: var(--accent); }
+.findings { margin: 10px 0 6px; font-size: 14px; }
+.findings summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.handoff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.handoff { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--panel); }
+.handoff-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 14px; }
+.handoff .q { grid-template-columns: 86px 1fr; font-size: 13px; margin-top: 8px; }
+.callout { margin: 0 0 10px; padding: 10px 12px; background: var(--warning-soft); border-radius: 8px; font-size: 14px; font-weight: 600; }
+.ranked { margin: 0 0 14px; padding-left: 20px; font-size: 13.5px; line-height: 1.45; display: grid; gap: 4px; }
+table.t.boxed { border: 1px solid var(--line); border-radius: 10px; border-collapse: separate; border-spacing: 0; overflow: hidden; font-size: 13px; }
+table.t.boxed th { background: var(--panel-2); font-size: 11px; }
+table.t.boxed tbody tr:last-child td { border-bottom: 0; }
+table.t.boxed tbody tr:hover td { background: var(--hover); }
+
+/* Audit log */
+.card .audit-filters { padding: 0 18px 10px; }
+.card .act-row { padding: 8px 18px; }
+.card .act-raw { padding-left: 74px; }
+.card .activity { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); overflow: hidden; }
+.card .empty { padding: 20px; }
+.card .facts { background: var(--panel); gap: 0; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: none; }
+.card .facts > div + div { border-left: 1px solid var(--line); }
+@media (max-width: 760px) { .card .facts { grid-auto-flow: row; grid-template-columns: 1fr 1fr; } .card .facts > div + div { border-left: 0; } }

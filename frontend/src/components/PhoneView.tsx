@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, post } from "../api";
 import { download, fmtTime, icsFor, mmss } from "../util";
+import Card from "./Card";
 
 // Doctor phone (demo): pick a doctor, see their offers on a phone-sized screen.
 export default function PhoneView({ state }: any) {
@@ -14,40 +15,57 @@ export default function PhoneView({ state }: any) {
   const shown = offers.find((o: any) => o.id === offerId) || offers[offers.length - 1];
 
   return (
-    <div className="phone-wrap">
-      <div style={{ width: 300 }}>
-        <div className="section-title">Doctors with offers</div>
-        {docs.length === 0 && <p className="muted">No offers yet. Approve one in the clinical lead view.</p>}
-        {docs.map((d) => (
-          <div key={d} className={`inbox-item ${d === current ? "active" : ""}`} onClick={() => { setDoc(d); setOfferId(null); }}>
-            <b>{byDoc[d][0].physician_name}</b>
-            <div className="muted small">{byDoc[d].map((o: any) => `${o.id}: ${o.status}`).join(", ")}</div>
-          </div>
-        ))}
-        {offers.length > 1 && (
-          <>
-            <div className="section-title">Offers for this doctor</div>
-            {offers.map((o: any) => (
-              <div key={o.id} className={`inbox-item ${shown && o.id === shown.id ? "active" : ""}`} onClick={() => setOfferId(o.id)}>
-                {o.id}: {o.window_label} ({o.status})
-              </div>
+    <div className="phone-layout">
+      <Card title="Doctors with offers" count={docs.length} sub="Pick a doctor to see what their phone shows">
+        <div className="card-body">
+          {docs.length === 0 && <p className="muted small">No offers yet. Approve one in the Clinical lead tab and it appears here.</p>}
+          <div className="iv-list flush">
+            {docs.map((d) => (
+              <button key={d} className={`iv-row ${d === current ? "selected" : ""}`} onClick={() => { setDoc(d); setOfferId(null); }}>
+                <span className={`iv-dot ${byDoc[d].some((o: any) => o.status === "sent") ? "warning" : "ok"}`} />
+                <span className="iv-row-text">
+                  <b>{byDoc[d][0].physician_name}</b>
+                  <span className="iv-place">{byDoc[d].map((o: any) => `${o.id}: ${o.status}`).join(", ")}</span>
+                </span>
+              </button>
             ))}
-          </>
-        )}
-        {shown && (
-          <p className="small muted">
-            Real-phone link: <a href={`/offer/${shown.id}`} target="_blank" rel="noreferrer">/offer/{shown.id}</a>.
-            Delivered by {shown.channel_label}
-            {shown.delivery?.status && shown.delivery.status !== "simulated" ? ` (${shown.delivery.status}).` : " (simulated)."}
-            {shown.channel === "sms" && " A text reply of 1 accepts and 2 declines."}
-          </p>
-        )}
-      </div>
-      <div className="phone">
-        <div className="phone-screen">
-          {shown ? <OfferScreen offerId={shown.id} /> : <div className="phone-msg muted">No offers.</div>}
+          </div>
+          {offers.length > 1 && (
+            <>
+              <div className="sub-title">Offers for this doctor</div>
+              <div className="iv-list flush">
+                {offers.map((o: any) => (
+                  <button key={o.id} className={`iv-row ${shown && o.id === shown.id ? "selected" : ""}`} onClick={() => setOfferId(o.id)}>
+                    <span className="iv-row-text"><b>{o.window_label}</b><span className="iv-place">{o.id}, {o.status}</span></span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {shown && (
+            <p className="small muted phone-note">
+              Real-phone link: <a href={`/offer/${shown.id}`} target="_blank" rel="noreferrer">/offer/{shown.id}</a>.
+              Delivered by {shown.channel_label}
+              {shown.delivery?.status && shown.delivery.status !== "simulated" ? ` (${shown.delivery.status}).` : " (simulated)."}
+              {shown.channel === "sms" && " A text reply of 1 accepts and 2 declines."}
+            </p>
+          )}
         </div>
-      </div>
+      </Card>
+      <Card title="Phone preview" sub="Exactly what the doctor receives: hospitals, hours and why them. No patient details.">
+        <div className="phone-stage">
+          <div className="phone">
+            <div className="phone-screen">
+              {shown ? <OfferScreen offerId={shown.id} /> : (
+                <div className="phone-empty">
+                  <b>No offers yet</b>
+                  <span>When the clinical lead approves an offer, it arrives here with a 10-minute countdown.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

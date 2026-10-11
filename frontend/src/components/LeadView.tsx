@@ -2,6 +2,7 @@ import { useState } from "react";
 import { post } from "../api";
 import { fmtTime, minutesBetween, mmss, shortHospital } from "../util";
 import { EligibilityTable } from "./IssueDrawer";
+import Card from "./Card";
 
 // The clinical lead approves or rejects split-shift offers and authorizes escalations.
 // The page answers three questions in order: what needs my decision, where is stroke care short,
@@ -18,26 +19,33 @@ export default function LeadView({ state, act }: any) {
     (a: any) => a.kind === "escalate" && a.status !== "undone" && !(a.issue_id && issues.find((i: any) => i.id === a.issue_id)?.acknowledged_at));
   const decisions = pending.length + escalations.length;
 
+  const strokeRows = issues.filter((i: any) => i.stroke && i.severity === "critical");
+
   return (
-    <div className="lead">
+    <div className="overview">
       <Pulse state={state} issues={issues} />
 
-      <div className="section-title">Needs your decision ({decisions})</div>
-      {pending.map((p: any) => <Approval key={p.id} plan={p} state={state} act={act} issues={issues} />)}
-      {escalations.map((a: any) => <Escalation key={a.id} a={a} issues={issues} act={act} />)}
-      {decisions === 0 && <NothingYet issues={issues} />}
+      <div className="ov-grid">
+        <Card title="Needs your decision" count={decisions} sub="Approve or reject in one step. Every decision is logged with your name.">
+          <div className="card-body stack">
+            {pending.map((p: any) => <Approval key={p.id} plan={p} state={state} act={act} issues={issues} />)}
+            {escalations.map((a: any) => <Escalation key={a.id} a={a} issues={issues} act={act} />)}
+            {decisions === 0 && <NothingYet issues={issues} />}
+          </div>
+        </Card>
+        <Card title="Stroke care at risk now" count={strokeRows.length} sub="Stroke consults past their time limit. Click one for the reason.">
+          <StrokeRisk rows={strokeRows} />
+        </Card>
+      </div>
 
-      <div className="section-title">Coverage outlook</div>
-      <CoverageGrid state={state} />
-
-      <div className="section-title">Stroke care at risk now</div>
-      <StrokeRisk issues={issues} />
+      <Card title="Coverage outlook" sub="Hospitals that go short in the next few hours. On shift / required, every 15 minutes.">
+        <CoverageGrid state={state} />
+      </Card>
 
       {decided.length > 0 && (
-        <>
-          <div className="section-title">Your decisions</div>
+        <Card title="Your decisions" count={decided.length} sub="Offers you approved or rejected, and what happened next">
           <Decided plans={decided} />
-        </>
+        </Card>
       )}
     </div>
   );
@@ -49,10 +57,10 @@ function Pulse({ state, issues }: any) {
   const later = state.gaps.filter((g: any) => g.kind !== "now").length;
   const joining = state.joins.length;
   const tiles = [
-    { n: strokeNow, label: `stroke item${strokeNow === 1 ? "" : "s"} past the time limit`, tone: strokeNow ? "critical" : "ok" },
-    { n: noneFree, label: `hospital${noneFree === 1 ? "" : "s"} with a consult waiting and nobody free`, tone: noneFree ? "critical" : "ok" },
-    { n: later, label: `coverage gap${later === 1 ? "" : "s"} coming up`, tone: later ? "projected" : "ok" },
-    { n: joining, label: `doctor${joining === 1 ? "" : "s"} joining from an approved offer`, tone: joining ? "ok" : "info" },
+    { n: strokeNow, label: `Stroke item${strokeNow === 1 ? "" : "s"} past the limit`, tone: strokeNow ? "critical" : "ok" },
+    { n: noneFree, label: `Hospital${noneFree === 1 ? "" : "s"} with nobody free`, tone: noneFree ? "critical" : "ok" },
+    { n: later, label: `Coverage gap${later === 1 ? "" : "s"} coming up`, tone: later ? "projected" : "ok" },
+    { n: joining, label: `Doctor${joining === 1 ? "" : "s"} joining`, tone: joining ? "ok" : "info" },
   ];
   return (
     <div className="pulse">
@@ -313,9 +321,8 @@ const firstShort = (pts: any[]) => { const i = pts.findIndex((p) => p.short > 0)
 
 // ------------------------------------------------------------------ stroke risk
 
-function StrokeRisk({ issues }: any) {
+function StrokeRisk({ rows }: any) {
   const [open, setOpen] = useState<string | null>(null);
-  const rows = issues.filter((i: any) => i.stroke && i.severity === "critical");
   if (rows.length === 0) return <div className="panel quiet"><b>No stroke consult is past its limit.</b></div>;
   return (
     <div className="panel risk">
@@ -326,6 +333,7 @@ function StrokeRisk({ issues }: any) {
         return (
           <div key={i.id} className="risk-row">
             <button className="risk-main" onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>
+              <span className="iv-dot critical" />
               <span className="risk-where">{i.where?.hospital_name ? shortHospital(i.where.hospital_name) : i.where?.physician_name}</span>
               <span className="risk-what">{i.title}</span>
               <span className="risk-time">{i.wait_minutes ? `${i.wait_minutes} min` : ""}</span>

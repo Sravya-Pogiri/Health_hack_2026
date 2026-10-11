@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { api } from "../api";
 import { fmtTimeSec, shortHospital } from "../util";
+import Card from "./Card";
 
 // The audit log answers the brief's four questions for every offer: who was considered, who was
 // excluded and why, who approved, and what happened. Below that, every action as a plain sentence.
@@ -18,26 +19,20 @@ export default function AuditView({ state }: any) {
   const plans = [...state.plans].reverse();
 
   return (
-    <div className="audit">
-      <div className="audit-intro">
-        <div>
-          <b>Audit log</b>
-          <span className="muted"> Append-only. Nothing here can be edited or deleted.</span>
+    <div className="overview">
+      <Card title="Offer records" count={plans.length} right={<CopyJson rows={rows} />}
+        sub="For every offer: who was considered, who was excluded and why, who approved, and the outcome">
+        <div className="card-body stack">
+          {plans.length === 0 && (
+            <p className="muted">No offers yet. When the coordinator proposes one, its full record appears here.</p>
+          )}
+          {plans.map((p: any) => <OfferRecord key={p.id} plan={p} rows={rows} names={names} />)}
         </div>
-        <CopyJson rows={rows} />
-      </div>
+      </Card>
 
-      <div className="section-title">Offer records ({plans.length})</div>
-      {plans.length === 0 && (
-        <div className="panel quiet">
-          <b>No offers yet.</b>{" "}
-          <span className="muted">When the coordinator proposes one, its full record appears here: who was considered, who was excluded and why, who approved, and the outcome.</span>
-        </div>
-      )}
-      {plans.map((p: any) => <OfferRecord key={p.id} plan={p} rows={rows} names={names} />)}
-
-      <div className="section-title">All activity ({rows.length})</div>
-      <Activity rows={rows} names={names} />
+      <Card title="All activity" count={rows.length} sub="Append-only. Nothing here can be edited or deleted. Click a row for the raw entry.">
+        <Activity rows={rows} names={names} />
+      </Card>
     </div>
   );
 }

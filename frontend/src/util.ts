@@ -5,6 +5,15 @@ export function fmtTime(iso?: string | null): string {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: TZ });
 }
 
+// "7:00 PM" -> "7 PM"; other minutes are kept ("7:30 PM").
+export function fmtHour(iso?: string | null): string {
+  return fmtTime(iso).replace(":00", "");
+}
+
+export function lastName(name: string): string {
+  return name.replace(/^Dr\.\s+/, "").split(" ").slice(-1)[0];
+}
+
 export function fmtTimeSec(iso?: string | null): string {
   if (!iso) return "";
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", timeZone: TZ });

@@ -1,113 +1,10 @@
 import { Fragment, useEffect, useState } from "react";
 import { api } from "../api";
-import { fmtTime, SEVERITY_LABEL, shortHospital } from "../util";
-import { actionFor, planStatus } from "./Coordinator";
+import { fmtTime, lastName, SEVERITY_LABEL, shortHospital } from "../util";
+import { actionFor, Chevron, planStatus } from "./Coordinator";
 
-export default function IssueDrawer({ issueId, state, act, onClose }: any) {
-  const [d, setD] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [fg, setFg] = useState<any>(null);
-
-  useEffect(() => {
-    api(`/api/issues/${issueId}`).then(setD).catch((e) => setErr(e.message));
-  }, [issueId, state.now, state.audit_count]);
-
-  const names: Record<string, string> = {};
-  state.physicians.forEach((p: any) => (names[p.id] = p.name));
-
-  return (
-    <div className="overlay" onClick={onClose}>
-      <div className="drawer" onClick={(e) => e.stopPropagation()}>
-        <button className="btn close" onClick={onClose}>Close</button>
-        {err && <p>This item is no longer open: {err}</p>}
-        {!d && !err && <p>Loading...</p>}
-        {d && (
-          <>
-            <span className={`chip ${d.severity}`}>{SEVERITY_LABEL[d.severity]}</span>{" "}
-            {d.stroke && <span className="chip stroke">Stroke risk</span>}
-            <h2>{d.title}</h2>
-            <dl className="q">
-              <dt>What is going on</dt><dd>{d.what}</dd>
-              <dt>Where</dt>
-              <dd>{[d.where.hospital_name, d.where.consult_id, d.where.physician_name].filter(Boolean).join(" · ") || "Network-wide"}</dd>
-              <dt>Why it matters</dt><dd>{d.why}</dd>
-            </dl>
-
-            {d.what_to_do && <Recommendation d={d} state={state} act={act} />}
-
-            {d.strip && <Strip points={d.strip} names={names} />}
-
-            {d.hospital && <RouteTrace nextUp={d.hospital.next_up} names={names} />}
-
-            {d.eligibility && <EligibilityTable e={d.eligibility} />}
-
-            {d.eligibility && (
-              <>
-                <h3>Split-shift trap: where would the new doctor's calls go?</h3>
-                {!fg ? (
-                  <button className="btn" onClick={() => api("/api/simulate/flood-guard").then(setFg)}>
-                    Run the flood guard simulation
-                  </button>
-                ) : (
-                  <FloodGuard r={fg} />
-                )}
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Recommendation({ d, state, act }: any) {
-  const plan = d.what_to_do;
-  const p = plan.primary;
-  const action = actionFor(p, d);
-  const linked = d.plan_id ? state.plans.find((x: any) => x.id === d.plan_id) : null;
-  return (
-    <>
-      <h3>Recommended fix</h3>
-      <div className="todo">
-        <div className="label">{p.label}</div>
-        <div className="meta">
-          Who approves: {p.approver_label}
-          {p.eta_minutes ? ` · help in about ${p.eta_minutes} min` : ""}
-        </div>
-        <div style={{ marginTop: 6 }}>Why this fix: {p.why}</div>
-        {p.warnings?.map((w: string) => <div key={w} className="warn-text">{w}</div>)}
-        {plan.also_now?.length > 0 && (
-          <ul>{plan.also_now.map((o: any, i: number) => <li key={i}>Also now: {o.label}. {o.why}</li>)}</ul>
-        )}
-        {plan.backups?.length > 0 && (
-          <ul>{plan.backups.map((o: any, i: number) => <li key={i}>Backup: {o.label}</li>)}</ul>
-        )}
-        <div className="card-actions">
-          {linked ? (
-            <span className="chip accent">Plan {linked.id}: {planStatus(linked)}</span>
-          ) : (
-            <button className="btn primary" onClick={() => act(action.call, action.done)}>{action.label}</button>
-          )}
-        </div>
-      </div>
-      {plan.alternatives?.length > 0 && (
-        <>
-          <h3>Why not the other options?</h3>
-          <table className="t">
-            <tbody>
-              {plan.alternatives.map((o: any, i: number) => (
-                <tr key={i}>
-                  <td style={{ width: 200 }}><b>{LADDER[o.kind] || o.label}</b></td>
-                  <td>{o.why_not}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-    </>
-  );
-}
+// The shift-offer table only matters when the recommended fix is an offer.
+const OFFER_KINDS = ["split_shift", "start_early", "covered_by_offer"];
 
 const LADDER: Record<string, string> = {
   reassign: "1. Reassign on shift",
@@ -118,11 +15,187 @@ const LADDER: Record<string, string> = {
   split_shift: "6. Split-shift offer",
 };
 
+// "A. B." -> ["A.", "B."]. Keeps "Dr. Kim" and "11.3 h" in one piece.
+function sentences(text: string): string[] {
+  const safe = (text || "").replace(/\bDr\. /g, "Dr\u0001").replace(/(\d)\.(\d)/g, "$1\u0002$2");
+  const parts = safe.match(/[^.!?]+(?:[.!?]+|$)/g) || [safe];
+  return parts.map((x) => x.replace(/\u0001/g, ". ").replace(/\u0002/g, ".").trim()).filter(Boolean);
+}
+
+export default function IssueDrawer({ issueId, state, act, onClose }: any) {
+  const [d, setD] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [fg, setFg] = useState<any>(null);
+
+  useEffect(() => {
+    api(`/api/issues/${issueId}`).then(setD).catch((e) => setErr(e.message));
+  }, [issueId, state.now, state.audit_count]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const names: Record<string, string> = {};
+  state.physicians.forEach((p: any) => (names[p.id] = p.name));
+
+  const plan = d?.what_to_do;
+  const primary = plan?.primary;
+  const showOffers = !!d?.eligibility && !!primary && OFFER_KINDS.includes(primary.kind);
+
+  // "Harbor Regional: Stroke consult ..." -> place and problem.
+  const cut = d ? d.title.indexOf(": ") : -1;
+  const place = d ? (cut > 0 ? d.title.slice(0, cut) : d.where.hospital_name || d.where.physician_name || "") : "";
+  const problem = d ? (cut > 0 ? d.title.slice(cut + 2) : d.title) : "";
+  const where = d
+    ? [d.where.hospital_name, d.where.consult_id, d.where.physician_name].filter((x) => x && x !== place).join(" · ")
+    : "";
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="drawer" onClick={(e) => e.stopPropagation()}>
+        {err && <p>This item is no longer open: {err}</p>}
+        {!d && !err && <p>Loading...</p>}
+        {d && (
+          <>
+            <div className="dhead">
+              <div className="dchips">
+                <span className={`chip ${d.severity}`}>{SEVERITY_LABEL[d.severity]}</span>
+                {d.stroke && <span className="chip stroke">Stroke risk</span>}
+              </div>
+              <button className="btn small" title="Close (Esc)" onClick={onClose}>Close</button>
+            </div>
+            <h2 className="dtitle">{place && <b>{place} </b>}<span>{problem}</span></h2>
+            <p className="dwhat">{d.what}</p>
+            {where && <div className="dwhere">{where}</div>}
+
+            {plan && primary && <Recommendation d={d} state={state} act={act} />}
+
+            <div className="dsecs">
+              <Section title="Why it matters" summary={sentences(d.why)[0]}>
+                <ul className="dlist">
+                  {sentences(d.why).map((x, i) => <li key={i}>{x}</li>)}
+                </ul>
+              </Section>
+
+              {plan?.alternatives?.length > 0 && (
+                <Section title="Why not the other options" summary={`${plan.alternatives.length} ruled out`}>
+                  <table className="t">
+                    <tbody>
+                      {plan.alternatives.map((o: any, i: number) => (
+                        <tr key={i}>
+                          <td style={{ width: 200 }}><b>{LADDER[o.kind] || o.label}</b></td>
+                          <td>{o.why_not}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Section>
+              )}
+
+              {d.strip && (
+                <Section title="Coverage ahead" summary={stripSummary(d.strip)}>
+                  <Strip points={d.strip} names={names} />
+                </Section>
+              )}
+
+              {d.hospital?.next_up && (
+                <Section title="Who gets the next call here"
+                  summary={d.hospital.next_up.physician_id ? `${lastName(names[d.hospital.next_up.physician_id] || "")} would get it` : "nobody free"}>
+                  <RouteTrace nextUp={d.hospital.next_up} names={names} />
+                </Section>
+              )}
+
+              {showOffers && (
+                <Section title="Doctors considered for an offer"
+                  summary={`${d.eligibility.eligible_count} of ${d.eligibility.rows.length} eligible`}>
+                  <EligibilityTable e={d.eligibility} bare />
+                  <h4 style={{ margin: "18px 0 8px" }}>Split-shift trap: where would the new doctor's calls go?</h4>
+                  {!fg ? (
+                    <button className="btn" onClick={() => api("/api/simulate/flood-guard").then(setFg)}>
+                      Run the flood guard simulation
+                    </button>
+                  ) : (
+                    <FloodGuard r={fg} />
+                  )}
+                </Section>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, summary, children }: any) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="dsec">
+      <button className="dsec-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="dsec-title">{title}</span>
+        {!open && summary && <span className="dsec-sum">{summary}</span>}
+        <span className="dsec-chev"><Chevron open={open} /></span>
+      </button>
+      {open && <div className="dsec-body">{children}</div>}
+    </div>
+  );
+}
+
+function stripSummary(points: any[]): string {
+  const first = points.find((p: any) => p.short);
+  return first ? `short from ${fmtTime(first.t)}` : "staffed as needed";
+}
+
+function Recommendation({ d, state, act }: any) {
+  const plan = d.what_to_do;
+  const p = plan.primary;
+  const action = actionFor(p, d);
+  const linked = d.plan_id ? state.plans.find((x: any) => x.id === d.plan_id) : null;
+  return (
+    <div className="dfix">
+      <div className="dfix-kicker">Recommended</div>
+      <div className="dfix-label">{p.label}</div>
+      <div className="dfix-meta">
+        {p.approver_label}
+        {p.eta_minutes ? ` · help in about ${p.eta_minutes} min` : ""}
+      </div>
+      {p.why && <div className="dfix-why">{p.why}</div>}
+      {p.warnings?.map((w: string) => <div key={w} className="warn-text">{w}</div>)}
+      <div className="dfix-actions">
+        {linked ? (
+          <span className="chip accent">Plan {linked.id}: {planStatus(linked)}</span>
+        ) : (
+          <button className="btn primary" onClick={() => act(action.call, action.done)}>{action.label}</button>
+        )}
+      </div>
+      {plan.also_now?.length > 0 && (
+        <div className="dfix-more">
+          {plan.also_now.map((o: any, i: number) => {
+            const a = actionFor(o, d);
+            return (
+              <div key={i} className="qalso">
+                <span><span className="muted">Also now: </span>{o.label}</span>
+                <button className="btn small" onClick={() => act(a.call, a.done)}>{a.short}</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {plan.backups?.length > 0 && (
+        <div className="dfix-more muted small">
+          {plan.backups.map((o: any, i: number) => <div key={i}>Backup: {o.label}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Strip({ points, names }: any) {
   const max = Math.max(3, ...points.map((p: any) => Math.max(p.staffed, p.required)));
   return (
     <>
-      <h3>Next {Math.round((new Date(points[points.length - 1].t).getTime() - new Date(points[0].t).getTime()) / 60000)} minutes: credentialed doctors on shift against what is needed</h3>
       <div className="strip">
         {points.map((p: any) => (
           <div className="slot" key={p.t} title={p.staffed_ids.map((i: string) => names[i] || i).join(", ")}>
@@ -140,7 +213,6 @@ function Strip({ points, names }: any) {
 function RouteTrace({ nextUp, names }: any) {
   return (
     <>
-      <h3>If a new call came in here now (routing rules 1 to 4)</h3>
       <p>{nextUp.physician_id ? <><b>{names[nextUp.physician_id]}</b> would get it. {nextUp.reason.split(": ").slice(1).join(": ")}</> : <b>{nextUp.reason}</b>}</p>
       <table className="t">
         <tbody>
@@ -156,14 +228,21 @@ function RouteTrace({ nextUp, names }: any) {
   );
 }
 
-export function EligibilityTable({ e }: any) {
+export function EligibilityTable({ e, bare }: any) {
   const [open, setOpen] = useState<string | null>(null);
   return (
     <>
-      <h3>
-        Every off-duty doctor considered for {e.target_hospitals.map((h: any) => shortHospital(h.name)).join(", ")} (
-        {e.eligible_count} eligible)
-      </h3>
+      {bare ? (
+        <p className="muted small">
+          Off-duty doctors checked for {e.target_hospitals.map((h: any) => shortHospital(h.name)).join(", ")}. Click a row for
+          every rule.
+        </p>
+      ) : (
+        <h3>
+          Every off-duty doctor considered for {e.target_hospitals.map((h: any) => shortHospital(h.name)).join(", ")} (
+          {e.eligible_count} eligible)
+        </h3>
+      )}
       <table className="t">
         <thead>
           <tr><th>Doctor</th><th>Result</th><th>Offer or first rule failed</th></tr>

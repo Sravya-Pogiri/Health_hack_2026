@@ -102,6 +102,8 @@ class RelayService:
                              "end": j.end.isoformat(), "hospitals": sorted(j.hospitals) if j.hospitals else None,
                              "kind": j.kind, "offer_id": j.label} for j in self.book.joins()]
             out["outbox"] = self.notifier.outbox[-30:]
+            twilio = getattr(self.notifier, "cfg", None)
+            out["messaging"] = {"sms": twilio is not None, "shared_phone": bool(twilio and twilio.demo_phone)}
             out["audit_count"] = len(self.book.audit)
             out["summary"]["pending_approvals"] = len(out["pending_approvals"])
             return out
@@ -307,6 +309,43 @@ class RelayService:
     def online(self, offer_id: str) -> dict:
         result = self._offer_cmd(self.book.online, offer_id, self.now())
         return {**result, "offer": self.book.offer_json(self.book.offers[offer_id], self.now())}
+
+    def sms_reply(self, from_number: str, body: str) -> str:
+        """A doctor's text reply: 1 accepts, 2 declines, ONLINE confirms they are logged in. Returns the text to send back."""
+        from .notify import parse_reply
+
+        with self.lock:
+            intent = parse_reply(body)
+            mine = sorted((o for o in self.book.offers.values() if self.notifier.owns(from_number, o.physician_id)),
+                          key=lambda o: o.sent_at or o.start, reverse=True)
+            if intent is None:
+                return "Reply 1 to accept or 2 to decline."
+            if not mine:
+                return "There is no open offer for this number."
+            now = self.now()
+            if intent == "online":
+                target = next((o for o in mine if o.status == "accepted"), None)
+                if target is None:
+                    return "There is no accepted offer to confirm."
+                self.book.log(now, target.physician_id, "sms_reply", offer_id=target.id, intent=intent)
+                return self.online(target.id)["message"]
+            target = mine[0]            # the newest offer; the offer logic answers late, duplicate, or filled replies
+            if intent == "accept" and target.status == "accepted":     # a doctor who texts "1" twice is still confirmed
+                return (f"You are already confirmed from {fmt_clock(target.accepted_online_at)} to "
+                        f"{fmt_clock(target.end)}.")
+            self.book.log(now, target.physician_id, "sms_reply", offer_id=target.id, intent=intent)
+            result = self.accept(target.id) if intent == "accept" else self.decline(target.id)
+            reply = result["message"]
+            if result.get("ok") and intent == "accept":
+                reply += " Reply ONLINE when you are logged in."
+            return reply
+
+    def sms_status(self, message_sid: str, status: str, error_code: str | None = None) -> bool:
+        with self.lock:
+            found = self.book.record_delivery_status(message_sid, status, self.now(), error_code)
+            if found:
+                self._save()
+            return found
 
     def offer_view(self, offer_id: str) -> dict:
         """The phone view: hospitals, hours, start time, why you. No patient details."""

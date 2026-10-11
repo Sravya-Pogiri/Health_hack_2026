@@ -53,7 +53,7 @@ function OfferRecord({ plan, rows, names }: any) {
   const approved = steps.find((r: Row) => r.action === "approved" || r.action === "rejected");
   const sent = steps.filter((r: Row) => r.action === "sent");
   const outcome = outcomeOf(plan);
-  const msg = sent[0]?.message;
+  const msg = sent[0]?.delivery?.body || sent[0]?.message;     // the real text, including the reply instructions
 
   return (
     <div className="approval record">
@@ -236,6 +236,8 @@ function sentence(r: Row, names: Record<string, string>): string {
     case "plan_cancelled": return `cancelled the offer${r.reason ? `: ${r.reason}` : ""}.`;
     case "sent": return `sent the offer to ${who(r.physician_id)} by ${channelLabel(r.channel)}. Expires at ${fmtTimeSec(r.expires_at)}.`;
     case "skipped_at_send": return `skipped ${who(r.physician_id)}: ${r.reason}`;
+    case "sms_reply": return `replied by text to ${r.intent === "accept" ? "accept" : r.intent === "decline" ? "decline" : "say they are online"}.`;
+    case "sms_status": return `text message to ${who(r.physician_id)}: ${r.status}.`;
     case "accepted": return `accepted. Online at ${fmtTimeSec(r.online_at)}.`;
     case "declined": return "declined. Relay moves to the next doctor on the list.";
     case "online": return "confirmed they are online.";

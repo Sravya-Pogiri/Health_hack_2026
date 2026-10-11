@@ -62,6 +62,7 @@ class Offer:
     online_confirmed_at: datetime | None = None
     no_show: bool = False
     history: list[dict] = field(default_factory=list)
+    delivery: dict = field(default_factory=dict)    # how the message went out: channel, status, Twilio SID, error
 
 
 @dataclass
@@ -245,6 +246,17 @@ class OfferBook:
         self._send_next(self.plans[o.plan_id], now)
         return {"ok": True, "code": "declined", "message": "Thank you for letting us know."}
 
+    def record_delivery_status(self, message_sid: str, status: str, now: datetime, error_code: str | None = None) -> bool:
+        """Twilio's status callback: queued, sent, delivered, undelivered, or failed."""
+        for o in self.offers.values():
+            if o.delivery.get("twilio_sid") == message_sid:
+                o.delivery["status"] = status
+                if error_code:
+                    o.delivery["error_code"] = error_code
+                self.log(now, "system", "sms_status", offer_id=o.id, physician_id=o.physician_id, status=status)
+                return True
+        return False
+
     def online(self, offer_id: str, now: datetime) -> dict:
         o = self.offers[offer_id]
         if o.status != "accepted":
@@ -290,9 +302,11 @@ class OfferBook:
         o.history.append({"at": now.isoformat(), "status": "sent", "by": plan.approved_by or "system", "note": ""})
         self.offers[o.id] = o
         plan.offer_ids.append(o.id)
-        delivery = self.notifier.offer(c.physician_id, c.channel, text, o.id)
+        delivery = self.notifier.offer(c.physician_id, c.channel, text, o.id, name=c.name)
+        o.delivery = delivery
+        o.channel = delivery.get("channel", c.channel)
         self.log(now, "system", "sent", plan_id=plan.id, offer_id=o.id, physician_id=c.physician_id,
-                 channel=c.channel, message=text, delivery=delivery, expires_at=o.expires_at.isoformat())
+                 channel=o.channel, message=text, delivery=delivery, expires_at=o.expires_at.isoformat())
         return o
 
     # ------------------------------------------------------------ timers
@@ -348,7 +362,7 @@ class OfferBook:
             "seconds_left": max(0, remaining) if remaining is not None else None,
             "responded_at": _iso(o.responded_at), "online_at": _iso(o.accepted_online_at),
             "online_confirmed_at": _iso(o.online_confirmed_at), "no_show": o.no_show,
-            "kind": plan.kind, "history": o.history,
+            "kind": plan.kind, "history": o.history, "delivery": o.delivery,
         }
 
     def plan_json(self, plan: OfferPlan, now: datetime) -> dict:

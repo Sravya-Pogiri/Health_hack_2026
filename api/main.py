@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 from engine.config import REPO_ROOT
+from engine.notify import twiml
 from engine.privacy import PrivacyViolation
 from engine.service import RelayService
 
@@ -177,6 +178,40 @@ def decline(offer_id: str):
 @app.post("/api/offers/{offer_id}/online")
 def online(offer_id: str):
     return svc().online(offer_id)
+
+
+# ------------------------------------------------------------------ Twilio webhooks
+
+async def _twilio_form(request: Request) -> dict:
+    """The form Twilio posted, after checking its signature. Without Twilio set up, only a local run accepts it."""
+    form = {k: str(v) for k, v in (await request.form()).items()}
+    notifier = svc().notifier
+    cfg = getattr(notifier, "cfg", None)
+    if cfg is not None:
+        # Twilio signs the exact URL it was given, so behind a proxy RELAY_PUBLIC_URL must be that URL.
+        query = f"?{request.url.query}" if request.url.query else ""
+        url = f"{cfg.public_url}{request.url.path}{query}" if cfg.public_url else str(request.url)
+        if not notifier.valid_signature(url, form, request.headers.get("X-Twilio-Signature", "")):
+            raise HTTPException(status_code=403, detail="Bad Twilio signature.")
+    elif os.environ.get("RELAY_ENV", "local") != "local":
+        raise HTTPException(status_code=403, detail="Twilio is not set up.")
+    return form
+
+
+@app.post("/api/twilio/sms")
+async def twilio_sms(request: Request):
+    """Twilio calls this when a doctor texts back. The answer goes back to them as a text."""
+    form = await _twilio_form(request)
+    reply = svc().sms_reply(form.get("From", ""), form.get("Body", ""))
+    return Response(content=twiml(reply), media_type="application/xml")
+
+
+@app.post("/api/twilio/status")
+async def twilio_status(request: Request):
+    """Twilio calls this as an outgoing text moves from queued to delivered or failed."""
+    form = await _twilio_form(request)
+    svc().sms_status(form.get("MessageSid", ""), form.get("MessageStatus", ""), form.get("ErrorCode") or None)
+    return Response(status_code=204)
 
 
 @app.get("/api/physicians/{physician_id}/offers")

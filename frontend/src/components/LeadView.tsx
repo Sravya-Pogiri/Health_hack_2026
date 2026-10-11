@@ -73,6 +73,7 @@ function Approval({ plan, state, act, issues }: any) {
   const [rejecting, setRejecting] = useState(false);
   const [showAlts, setShowAlts] = useState(false);
   const best = plan.candidates[0];
+  const sms = !!state.messaging?.sms;
   const rows = plan.eligibility?.rows || [];
   const eligible = rows.filter((r: any) => r.eligible).length;
   const linked = issues.filter((i: any) => i.plan_id === plan.id);
@@ -155,13 +156,14 @@ function Approval({ plan, state, act, issues }: any) {
 
       <div className="muted small">
         {best.name} gets hospital names, hours and start time only. No patient details.
+        {sms && ` It goes out as a text message, and ${best.name} replies 1 to accept or 2 to decline.`}
         {plan.candidates.length > 1 && ` If they decline or don't answer in 10 minutes, it goes to ${plan.candidates[1].name}.`}
       </div>
 
       {!rejecting ? (
         <div className="buttons">
-          <button className="btn primary big" onClick={() => act(() => post(`/api/offers/${plan.id}/approve`, { by: BY }), `Approved. Offer sent to ${best.name}.`)}>
-            Approve and send
+          <button className="btn primary big" onClick={() => act(() => post(`/api/offers/${plan.id}/approve`, { by: BY }), sms ? `Approved. Texting ${best.name}.` : `Approved. Offer sent to ${best.name}.`)}>
+            {sms ? "Approve and send text" : "Approve and send"}
           </button>
           <button className="btn big" onClick={() => setRejecting(true)}>Reject</button>
         </div>
@@ -368,12 +370,28 @@ function decidedStatus(p: any, offer: any) {
   if (p.status === "rejected") return { chip: "Rejected", tone: "info", text: p.decision_note || "" };
   if (p.status === "filled") return { chip: "Filled", tone: "ok", text: "Accepted. Coverage updated." };
   if (p.status === "exhausted") return { chip: "No taker", tone: "critical", text: "Nobody accepted. Escalate." };
-  if (offer?.status === "sent") return { chip: "Waiting", tone: "warning", text: `Offer sent to ${offer.physician_name}, ${mmss(offer.seconds_left)} left to answer` };
+  if (offer?.status === "sent" && offer.delivery && ["failed", "undelivered", "no_phone"].includes(offer.delivery.status)) {
+    return { chip: "Not delivered", tone: "critical", text: `${deliveryNote(offer)}. Reach ${offer.physician_name} another way; the offer is still open in the app for ${mmss(offer.seconds_left)}.` };
+  }
+  if (offer?.status === "sent") {
+    const note = deliveryNote(offer);
+    return { chip: "Waiting", tone: "warning", text: `${note ? `${note}. ` : "Offer sent. "}Waiting for ${offer.physician_name} to reply, ${mmss(offer.seconds_left)} left` };
+  }
   if (offer) return { chip: "Approved", tone: "accent", text: `Offer to ${offer.physician_name}: ${offer.status}` };
   return { chip: "Approved", tone: "accent", text: "" };
 }
 
 // ------------------------------------------------------------------ helpers
+
+// How the text message went out, in a few words. Empty when nothing real was sent (simulated mode).
+function deliveryNote(o: any): string {
+  const d = o?.delivery;
+  if (!d || !d.status || d.status === "simulated") return "";
+  if (d.status === "no_phone") return "No phone number on file";
+  if (d.status === "failed" || d.status === "undelivered") return `Text not delivered${d.error ? ` (${d.error})` : ""}`;
+  if (d.channel !== "sms") return "";
+  return d.status === "delivered" ? `Text delivered to ${d.to}` : `Text sent to ${d.to}`;
+}
 
 function hoursLabel(plan: any, best: any): string {
   const offer = plan.offers?.[0];

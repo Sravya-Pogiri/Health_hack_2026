@@ -103,6 +103,23 @@ Open http://localhost:8080. Or with Docker: `docker compose up --build`.
 
 For frontend development, run `npm run dev` in `frontend/` (port 5173, proxies `/api` to 8080).
 
+## Text-message offers (Twilio)
+
+By default offers appear in the Doctor phone tab (simulated). To send real texts, copy `.env.example` to `.env`
+(git-ignored), fill in your Twilio account SID, auth token and sender number, and set `RELAY_DEMO_PHONE` to your
+own phone. Restart the app. The Clinical lead's button then reads **Approve and send text**.
+
+- The text carries only hospital names, hours and the reason (the same guarded template), plus
+  "Reply 1 to accept or 2 to decline." The doctor replies **1** (accept), **2** (decline) or **ONLINE** (logged in).
+- Replies reach Relay at `POST /api/twilio/sms`. Point your Twilio number's "A message comes in" webhook at
+  `<RELAY_PUBLIC_URL>/api/twilio/sms`; locally, expose port 8080 with a tunnel such as ngrok and set `RELAY_PUBLIC_URL`
+  to that https address. Every webhook is checked against Twilio's `X-Twilio-Signature`; unsigned requests get a 403.
+- Delivery status (queued, delivered, failed) shows on the Clinical lead's decisions and in the audit log.
+  A failed text leaves the offer open in the app and says so.
+- First acceptance wins and offers expire after 10 minutes, exactly as in the app. Replies are logged by intent only.
+- Trial accounts can only text verified numbers, and Twilio's trial docs say custom message text may be limited to
+  its own templates. If a text shows as failed with a Twilio error, check your account type first.
+
 ## Deploy to AWS
 
 Full steps are in [`infra/README.md`](infra/README.md). In short, with the AWS CLI signed in and Docker running:

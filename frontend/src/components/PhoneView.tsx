@@ -37,7 +37,9 @@ export default function PhoneView({ state }: any) {
         {shown && (
           <p className="small muted">
             Real-phone link: <a href={`/offer/${shown.id}`} target="_blank" rel="noreferrer">/offer/{shown.id}</a>.
-            Delivered by {shown.channel_label} (simulated).
+            Delivered by {shown.channel_label}
+            {shown.delivery?.status && shown.delivery.status !== "simulated" ? ` (${shown.delivery.status}).` : " (simulated)."}
+            {shown.channel === "sms" && " A text reply of 1 accepts and 2 declines."}
           </p>
         )}
       </div>

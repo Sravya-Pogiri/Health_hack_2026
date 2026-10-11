@@ -50,11 +50,13 @@ function Main() {
     }
   }, []);
 
+  // Refresh faster while the demo clock is playing, so a sped-up clock moves smoothly.
+  const playing = state?.clock?.mode === "playing";
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 2000);
+    const id = setInterval(refresh, playing ? 1000 : 2000);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, playing]);
 
   useEffect(() => {
     const onHash = () => setRole(roleFromHash());

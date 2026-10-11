@@ -69,11 +69,11 @@ export function SimBar({ state, act }: any) {
           </button>
         ) : (
           <>
-            <button className="btn" title="10 times real speed: one minute every 6 seconds" onClick={() => clockCmd({ action: "play", speed: 10 }, "Playing at 10x: one minute every 6 seconds")}>
-              <SimIcon d="M7 4.5l12 7.5-12 7.5z" fill /> Play 10x
-            </button>
             <button className="btn" title="60 times real speed: one minute every second" onClick={() => clockCmd({ action: "play", speed: 60 }, "Playing at 60x: one minute every second")}>
-              <SimIcon d="M4 4.5l9 7.5-9 7.5zM12 4.5l9 7.5-9 7.5z" fill /> Play 60x
+              <SimIcon d="M7 4.5l12 7.5-12 7.5z" fill /> Play 60x
+            </button>
+            <button className="btn" title="300 times real speed: five minutes every second" onClick={() => clockCmd({ action: "play", speed: 300 }, "Playing at 300x: five minutes every second")}>
+              <SimIcon d="M4 4.5l9 7.5-9 7.5zM12 4.5l9 7.5-9 7.5z" fill /> Play 300x
             </button>
           </>
         )}

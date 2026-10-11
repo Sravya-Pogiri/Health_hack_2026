@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, post } from "../api";
 import { download, fmtTime, icsFor, mmss } from "../util";
-import Icon from "./Icon";
 
 // Doctor phone (demo): pick a doctor, see their offers on a phone-sized screen.
 export default function PhoneView({ state }: any) {
@@ -46,13 +45,7 @@ export default function PhoneView({ state }: any) {
       </div>
       <div className="phone">
         <div className="phone-screen">
-          {shown ? <OfferScreen offerId={shown.id} /> : (
-            <div className="phone-empty">
-              <span className="ring"><Icon name="phone" size={28} /></span>
-              <b>No offers yet</b>
-              <span className="small">When the clinical lead approves an offer, it arrives here with a 10-minute countdown.</span>
-            </div>
-          )}
+          {shown ? <OfferScreen offerId={shown.id} /> : <div className="phone-msg muted">No offers.</div>}
         </div>
       </div>
     </div>

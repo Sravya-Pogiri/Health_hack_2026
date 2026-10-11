@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
-import { Sidebar, Topbar } from "./components/Header";
+import Header from "./components/Header";
 import Coordinator from "./components/Coordinator";
 import LeadView from "./components/LeadView";
 import PhoneView, { OfferScreen } from "./components/PhoneView";
@@ -27,19 +27,8 @@ export default function App() {
   return <Main />;
 }
 
-type Theme = "light" | "dark";
-
-function initialTheme(): Theme {
-  try {
-    const saved = localStorage.getItem("relay-theme");
-    if (saved === "light" || saved === "dark") return saved;
-  } catch {}
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 function Main() {
   const [role, setRole] = useState<Role>(roleFromHash());
-  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [state, setState] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -58,13 +47,6 @@ function Main() {
     const id = setInterval(refresh, 2000);
     return () => clearInterval(id);
   }, [refresh]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem("relay-theme", theme);
-    } catch {}
-  }, [theme]);
 
   useEffect(() => {
     const onHash = () => setRole(roleFromHash());
@@ -96,34 +78,25 @@ function Main() {
   };
 
   if (!state) {
-    return (
-      <div className="boot">
-        <div className="brand-mark big">R</div>
-        <p>{error ? `Cannot reach the Relay API: ${error}` : "Loading Relay..."}</p>
-      </div>
-    );
+    return <div className="empty">{error ? `Cannot reach the Relay API: ${error}` : "Loading Relay..."}</div>;
   }
 
   return (
-    <div className="app">
-      <Sidebar state={state} role={role} setRole={changeRole} theme={theme}
-        toggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")} />
-      <div className="main">
-        <Topbar state={state} role={role} act={act} />
-        <main className="page" key={role}>
-          {error && <div className="banner stale">Connection problem: {error}. Showing the last data received.</div>}
-          {role === "coordinator" && <Coordinator state={state} act={act} />}
-          {role === "lead" && <LeadView state={state} act={act} />}
-          {role === "phone" && <PhoneView state={state} act={act} />}
-          {role === "insights" && <InsightsView state={state} act={act} />}
-          {role === "audit" && <AuditView state={state} />}
-          <div className="footer">
-            All data is synthetic. Relay uses no patient information: matching uses hospital, consult type, stage, and
-            timers only. Role switcher is for the demo; production would use sign-in.
-          </div>
-        </main>
+    <>
+      <Header state={state} role={role} setRole={changeRole} act={act} />
+      <div className="page">
+        {error && <div className="banner stale">Connection problem: {error}. Showing the last data received.</div>}
+        {role === "coordinator" && <Coordinator state={state} act={act} />}
+        {role === "lead" && <LeadView state={state} act={act} />}
+        {role === "phone" && <PhoneView state={state} act={act} />}
+        {role === "insights" && <InsightsView state={state} act={act} />}
+        {role === "audit" && <AuditView state={state} />}
+        <div className="footer">
+          All data is synthetic. Relay uses no patient information: matching uses hospital, consult type, stage, and
+          timers only. Role switcher is for the demo; production would use sign-in.
+        </div>
       </div>
-      {toast && <div className="toast" role="status">{toast}</div>}
-    </div>
+      {toast && <div className="toast">{toast}</div>}
+    </>
   );
 }

@@ -764,3 +764,9 @@ table.t.boxed .findings ul { margin: 6px 0 0; padding-left: 16px; }
   .cov-table td.now b, .cov-table td.now small { display: inline; }
 }
 @media (max-width: 760px) { .card-body { overflow-x: auto; } }
+
+/* After the coordinator acts on an intervention */
+.iv-done { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #a9d8d4; display: grid; gap: 8px; }
+.iv-done-text { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--accent); font-weight: 500; line-height: 1.4; }
+.iv-done-text svg { flex: none; margin-top: 2px; }
+.iv-done-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }

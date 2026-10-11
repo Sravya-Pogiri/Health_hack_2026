@@ -258,14 +258,22 @@ export function actionFor(opt: any, issue: any) {
   }
 }
 
-const isAcked = (g: any) => !!(g.issues.find((i: any) => i.id === g.primary_issue_id) || g.issues[0])?.acknowledged_at;
+const primaryOf = (g: any) => g.issues.find((i: any) => i.id === g.primary_issue_id) || g.issues[0];
+const isAcked = (g: any) => !!primaryOf(g)?.acknowledged_at;
+
+// The coordinator's latest action on an issue that has not been undone (reassign, contact, escalate).
+function lastAction(state: any, issueId: string) {
+  return [...(state.coordinator_actions || [])].reverse().find((a: any) => a.issue_id === issueId && a.status !== "undone");
+}
 
 function Interventions({ state, act, open }: any) {
-  // Acknowledged items move below the rest, so the next thing to act on is always on top and open.
+  // Acknowledged items move below the rest. Items already acted on stay in place, showing what was done,
+  // and the first item nobody has handled yet opens by default.
+  const handled = (g: any) => isAcked(g) || !!lastAction(state, primaryOf(g).id);
   const groups = [...state.issues.filter((g: any) => !isAcked(g)), ...state.issues.filter(isAcked)];
   const [expanded, setExpanded] = useState<string | null>(null);
   const [all, setAll] = useState(false);
-  const fallback = groups[0] && !isAcked(groups[0]) ? groups[0].id : null;
+  const fallback = groups.find((g: any) => !handled(g))?.id ?? null;
   const current = expanded === "" ? null : groups.some((g: any) => g.id === expanded) ? expanded : fallback;
   const shown = all ? groups : groups.slice(0, INTERVENTIONS_SHOWN);
 
@@ -280,7 +288,7 @@ function Interventions({ state, act, open }: any) {
         {shown.map((g: any) => (
           <Intervention key={g.id} group={g} state={state} act={act} open={open}
             expanded={current === g.id} toggle={() => setExpanded(current === g.id ? "" : g.id)}
-            onAck={() => setExpanded(null)} />
+            onAck={() => setExpanded(null)} keepOpen={() => setExpanded(g.id)} />
         ))}
       </div>
       {groups.length > INTERVENTIONS_SHOWN && (
@@ -292,8 +300,9 @@ function Interventions({ state, act, open }: any) {
   );
 }
 
-function Intervention({ group, state, act, open, expanded, toggle, onAck }: any) {
-  const issue = group.issues.find((i: any) => i.id === group.primary_issue_id) || group.issues[0];
+function Intervention({ group, state, act, open, expanded, toggle, onAck, keepOpen }: any) {
+  const issue = primaryOf(group);
+  const done = lastAction(state, issue.id);
   const plan = issue.what_to_do;
   const primary = plan?.primary;
   const action = primary ? actionFor(primary, issue) : null;
@@ -316,6 +325,7 @@ function Intervention({ group, state, act, open, expanded, toggle, onAck }: any)
           <b>{problem}</b>
         </span>
         {issue.acknowledged_at && <span className="chip ok">Acknowledged</span>}
+        {done && !issue.acknowledged_at && <span className="chip ok">{DONE_CHIP[done.kind] || "Done"}</span>}
         <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" className="iv-go">
           <path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -349,10 +359,10 @@ function Intervention({ group, state, act, open, expanded, toggle, onAck }: any)
       <div className="iv-actions">
         {linkedPlan ? (
           <span className="chip accent big" title={`Plan ${linkedPlan.id}`}>{capitalize(planStatus(linkedPlan))}</span>
-        ) : (
+        ) : done ? null : (
           action && (
             <button className="btn primary big" title={(action as any).hint}
-              onClick={async () => { await act(action.call, action.done); if ((action as any).ack) onAck(); }}>
+              onClick={async () => { await act(action.call, action.done); if ((action as any).ack) onAck(); else keepOpen(); }}>
               {action.label}
             </button>
           )
@@ -362,6 +372,7 @@ function Intervention({ group, state, act, open, expanded, toggle, onAck }: any)
           <button className="link muted-link" onClick={async () => { await act(() => post(`/api/issues/${issue.id}/ack`), "Acknowledged"); onAck(); }}>Acknowledge</button>
         )}
       </div>
+      {done && !linkedPlan && <ActionStatus done={done} issue={issue} state={state} act={act} />}
       {plan?.also_now?.length > 0 && (
         <div className="iv-also">
           {plan.also_now.map((o: any, i: number) => {
@@ -376,6 +387,44 @@ function Intervention({ group, state, act, open, expanded, toggle, onAck }: any)
         </div>
       )}
       {related > 0 && <div className="iv-related muted small">{related} related item{related === 1 ? "" : "s"} in the reasoning.</div>}
+    </div>
+  );
+}
+
+const DONE_CHIP: Record<string, string> = { reassign: "Reassign requested", contact: "Logged", escalate: "Escalated" };
+
+// What happened after the coordinator acted. Synapp records the action; Synapse confirms it with its own event.
+function ActionStatus({ done, issue, state, act }: any) {
+  const name = (id?: string) => state.physicians.find((p: any) => p.id === id)?.name || "the doctor";
+  const at = fmtTime(done.at);
+  const text =
+    done.kind === "reassign" ? `Reassignment to ${name(done.physician_id)} requested at ${at}. Waiting for Synapse to confirm.`
+    : done.kind === "escalate" ? `Escalated to the clinical lead at ${at}.`
+    : done.target === "hospital" ? `Call to the hospital logged at ${at}.`
+    : `${done.physician_id ? `Request to ${name(done.physician_id)}` : "Request"} logged at ${at}.`;
+  // Demo: the two events Synapse sends once a reassignment goes through (assigned, then the hospital's call connects).
+  const confirm = async () => {
+    const base = { consult_id: done.consult_id || issue.where?.consult_id, physician_id: done.physician_id, hospital_id: issue.where?.hospital_id };
+    const now = new Date(state.now).getTime();
+    const stamp = (ms: number) => new Date(ms).toISOString();
+    await act(() => post("/api/events", { ...base, event_type: "physician_assigned", description: "Consult assigned", event_time: stamp(now - 30000) }));
+    await act(() => post("/api/events", { ...base, event_type: "incoming_call_started", description: "Hospital calls assigned physician", event_time: stamp(now) }),
+      `Synapse confirmed: ${base.consult_id || "the consult"} is with ${name(done.physician_id)}, and the hospital has reached them`);
+  };
+  return (
+    <div className="iv-done">
+      <span className="iv-done-text">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        {text}
+      </span>
+      <span className="iv-done-actions">
+        {done.kind === "reassign" && done.physician_id && (
+          <button className="btn small" title="Demo: add the events Synapse sends once the reassignment goes through and the hospital reaches the doctor" onClick={confirm}>
+            Simulate Synapse confirming
+          </button>
+        )}
+        <button className="link muted-link" onClick={() => act(() => post("/api/actions/undo", { action_id: done.id }), "Undone")}>Undo</button>
+      </span>
     </div>
   );
 }

@@ -1,64 +1,167 @@
 # Synapp
 
-**Sevaro can already see problems. Synapp gets a doctor covering the gap before a stroke patient waits.**
+**Sevaro can already see the problems. Synapp gets a neurologist onto them before a stroke patient waits.**
 
-Synapp is our entry for Rutgers Health Hack 2026, Sevaro track, Challenge 2: "Tele-Neurology Operations Command Center:
-From Visibility to Intervention." It sits next to Sevaro's Synapse platform. It rebuilds the true state of the network
-from the event stream, finds what needs attention now and in the next 90 minutes, recommends the fix, gets a person to
-approve it, sends the offer, and closes the loop.
+We built Synapp for Rutgers Health Hack 2026 (Sevaro track, Challenge 2: "Tele-Neurology Operations Command Center:
+From Visibility to Intervention"). It sits next to Sevaro's Synapse platform, reads the same event stream, works out
+what's actually going on across the network, and then helps a coordinator fix it: who to call, who has to approve it,
+and what the doctor gets on their phone.
 
-![Coordinator view](docs/screenshots/coordinator.png)
+## Why we built it
 
-## The problem
+Here's the moment that got us. At 6:20 PM in the sample data, Sevaro's live view looks fine: most doctors say
+"Available". But look closer:
 
-At 6:20 PM Sevaro's live view looks fine: most doctors show "Available". But nobody approved at Oak Valley Medical is
-free, and a stroke consult there has failed routing three times. Suncrest Medical Pavilion has had 5 consults in an
-hour when its normal busy level is 1. A stroke consult at Harbor Regional is assigned to a doctor who just set
-"Temporarily Unavailable". Two doctors leave at 7 PM with unsigned notes, and four more leave at 8 PM. Today, fixing
-this depends on someone noticing, working out by hand who is credentialed and eligible, and calling them.
+- Nobody approved at Oak Valley Medical is actually free, and a stroke consult there has failed routing three times.
+- Suncrest Medical Pavilion has had 5 consults in the last hour when it normally sees 1.
+- A stroke consult at Harbor Regional is assigned to a doctor who just set "Temporarily Unavailable".
+- Two doctors leave at 7 PM with unsigned notes, and four more leave at 8 PM.
 
-## What Synapp does
+Right now, fixing any of that depends on someone noticing, figuring out by hand who's credentialed and allowed to
+help, and picking up the phone. We wanted the screen to do that work.
 
-**Detect.** Synapp replays every event in the order it happened (not the order it arrived), drops duplicates, and
-places late records where they belong. It infers who is really free from calls, video, camera, and the desktop agent,
-never from self-reported status alone. It checks every consult against Sevaro's time standards, compares each hospital
-with its own normal level to spot surges, and projects staffed coverage every 15 minutes past the 7, 8, and 9 PM shift
-changes.
+## What it does
 
-**Decide.** Every problem becomes a card that answers four questions: what is going on, where, why it matters, and what
-to do (with who approves and why this fix over the others). Cards are ranked by a fixed rule: stroke first, critical
-first, nobody working on it first, re-calls move up, longer wait first. The fix comes from a ladder, least disruptive
-first: reassign, wait for a doctor about to free up, pull someone off lower-priority work (never a stroke call), ask a
-scheduled doctor to start early, offer a split shift, escalate. Every off-duty doctor is checked against every
-split-shift rule, with the numbers. If nobody qualifies, Synapp escalates. It never bends a rule.
+**It figures out what's really happening.** Synapp replays every event in the order it happened (not the order it
+arrived), throws out duplicates and puts late records where they belong. It decides whether a doctor is truly free from
+their calls, video, camera and desktop agent, not just their self-reported status. It checks every consult against
+Sevaro's time standards, compares each hospital to its own normal volume to catch surges, and projects coverage every
+15 minutes past the evening shift changes.
 
-**Act.** The coordinator proposes; the clinical lead on duty approves in one step; Synapp sends the offer to the
-doctor's phone with hospital names, hours, start time, and why them, and nothing else. Offers expire after 10 minutes.
-The first acceptance wins; a second gets "This shift is already filled". When someone accepts, projected coverage
-updates, routing keeps the new doctor on the hospitals that need help (the flood guard), and every other open offer is
-retracted. Every step lands in an append-only audit log.
+**It tells you what to do about it.** Every problem becomes one card: what's going on, where, why it matters and the
+recommended fix. Stroke comes first, then anything critical, then anything nobody is working on yet. The fix is always
+the least disruptive one that works:
 
-### On the kit data at 6:20 PM
+1. reassign to a free doctor on shift
+2. wait for someone who's about to free up
+3. pull someone off lower-priority work (never off a stroke call)
+4. ask a scheduled doctor to start early
+5. offer an off-duty doctor a split shift
+6. escalate
 
-- Replaying the event stream reproduces Sevaro's reference snapshot exactly: all 8 doctors and all 18 open consults.
-- Top of the queue: Harbor's stroke consult assigned to an unavailable doctor (ask Dr. Cho, scheduled at 7 PM, to start
-  now), then Oak Valley's stroke consult with nobody free (offer Dr. Okafor a split shift and escalate now).
-- Of six off-duty doctors, only Dr. Okafor meets every rule. The others fail on credentialing, overlap with a scheduled
-  shift, opt-in, or the 60-hour week, and the table shows each one's numbers.
-- One offer, 6:35 PM to 10:00 PM, covers Oak Valley, the Suncrest surge, and the Northfield gap at 8 PM.
-- The routing model reproduces all 4 routing failures recorded in the kit.
+Every off-duty doctor is checked against every split-shift rule (rest, weekly hours, opt-in, credentials, overlap),
+and the app shows the numbers. If nobody qualifies, it escalates. It never bends a rule to make a plan work.
 
-### Screens
+**It closes the loop.** The coordinator proposes, the clinical lead approves in one click, and the doctor gets an offer
+on their phone with the hospitals, hours and why they were picked. Nothing about patients. Offers expire after 10
+minutes, the first acceptance wins, and everyone else's open offer is withdrawn automatically. Every step lands in an
+append-only audit log.
 
-| Coordinator | Clinical lead | Doctor phone |
-|---|---|---|
-| Ranked queue, hospital coverage, true availability | Approve or reject in one step, with a plain summary | The offer, a 10-minute countdown, Accept or Decline |
-| ![](docs/screenshots/issue-drawer.png) | ![](docs/screenshots/clinical-lead.png) | ![](docs/screenshots/doctor-phone.png) |
+### What it finds in the sample data
 
-The Insights tab has the replay scoreboard ("Synapp would have flagged the Suncrest surge at 5:55 PM, 25 minutes before
-6:20 PM"), credentialing impact, handoff cards for doctors near shift end, and time to doctor per hospital.
+- Replaying the event stream reproduces Sevaro's 6:20 PM snapshot exactly: all 8 doctors and all 18 open consults.
+- The top two problems are Harbor's stroke consult (ask Dr. Cho, who starts at 7 PM, to start now) and Oak Valley's
+  stroke consult with nobody free (offer Dr. Okafor a split shift).
+- Of the six off-duty doctors, only Dr. Okafor passes every rule. The rest fail on credentials, an overlapping shift,
+  opt-in or the 60-hour week, and the eligibility table shows exactly why.
+- That one offer (6:35 to 10:00 PM) covers Oak Valley, the Suncrest surge and the Northfield gap at 8 PM.
+- Our routing model reproduces all 4 routing failures in the kit.
 
-## Architecture
+## The screens
+
+There's one tab per role. The role switcher is just for the demo; a real deployment would use sign-in.
+
+| Tab | What you see there |
+|---|---|
+| **Coordinator** | Headline counts, hospital coverage (now and the next three hours), the ranked list of interventions with the recommended fix, and who's on shift. Click a hospital to see who's free, busy or out. |
+| **Clinical lead** | What's waiting for approval, stroke consults past their limit, and the coverage outlook. Approve or reject in one step. |
+| **Doctor phone** | Exactly what the doctor receives: the offer, a 10-minute countdown, Accept or Decline. |
+| **Insights** | How much earlier Synapp would have spotted things in a replay of the day, upcoming handoffs, credentialing gaps and time to doctor per hospital. |
+| **Audit log** | Every proposal, approval, message and reply, in plain sentences, with filters. |
+
+A few things worth knowing when you click around:
+
+- When the coordinator reassigns a consult or logs a call, Synapp records it but doesn't change Synapse itself. The
+  card shows what you did, with an Undo. For the demo there's a **Simulate Synapse confirming** button that sends the
+  events Synapse would send once the reassignment goes through.
+- Acknowledged items drop to the bottom of the list, and the next thing that needs attention opens on its own.
+- The simulation bar at the bottom moves the clock: +1, +5 or +10 minutes, or play at 60x or 300x so you can watch
+  the 7 and 8 PM shift changes happen. **Reset** puts everything back.
+
+## Run it locally
+
+You'll need Python 3 (we use 3.13) and Node 18 or newer.
+
+```bash
+pip install -r requirements-dev.txt
+cd frontend && npm install && npm run build && cd ..
+uvicorn api.main:app --port 8080
+```
+
+Then open http://localhost:8080. If you'd rather use Docker: `docker compose up --build`.
+
+Working on the frontend? Run `npm run dev` in `frontend/` (port 5173; it forwards `/api` to 8080).
+
+**Opening it on your phone.** Start the server with `--host 0.0.0.0`, find your computer's IPv4 address with `ipconfig`
+(Windows) or `ipconfig getifaddr en0` (Mac), and open `http://<that address>:8080` on a phone on the same Wi-Fi. The
+offer screen on its own lives at `/offer/<offer id>`, which is the link shown on the Doctor phone tab. Some campus
+networks block phones from reaching laptops; a phone hotspot gets around that.
+
+## Trying it with your own data
+
+### A whole new dataset
+
+Click **Upload new dataset** (top right) and drop in the kit's CSV files or a zip of them. You need hospitals,
+doctors on shift, credentialing, coverage requirements and the event stream; the off-shift roster and hourly volume
+are optional. File names don't have to match ours. Synapp recognizes each file by its name or, failing that, by its
+columns, and it ignores files it doesn't need (like the snapshots).
+
+If something required is missing or a file has the wrong columns, it tells you exactly what and changes nothing.
+Otherwise it switches over straight away, sets "now" to the time of the latest record and clears any old offers.
+The button turns into **Uploaded data** so you always know what you're looking at, and **Back to the sample data**
+undoes it.
+
+We tested this with a copy of the kit where every hospital, doctor and consult ID was renamed and every time was moved
+three hours later. The engine finds the same problems.
+
+### New events for the current day
+
+Click **Add events** in the simulation bar and drop in a CSV with the same 8 columns as `event_stream.csv`. Synapp adds
+it to the day, skips duplicates, slots late records in by when they actually happened, and recalculates everything
+without a restart. It then shows what changed and what to do first.
+
+There are practice files in `data/demo_events/`: a new stroke at Suncrest, a re-call, late and duplicate records, the
+7 PM shift change, a quiet feed, and one full of things we didn't plan for. They're written for the sample data, so
+they're switched off while an uploaded dataset is in use.
+
+## Tests
+
+```bash
+python -m pytest        # 86 tests
+```
+
+They cover the exact snapshot match; duplicates, late events and arrival-order replay; re-calls; every split-shift
+rule right at its boundary (exactly 10 hours of rest and exactly 60 hours both pass); the whole offer workflow
+(approval, expiry, two people accepting, late replies, the weekly cap, retraction, no-shows, the backup approver); the
+privacy guard; the flood guard; uploads without a restart; bad data; every practice file; uploading a whole new
+dataset (including a zip with odd file names, a missing file and individual CSVs); and a no-hardcoding test that
+renames every ID, shifts every time by three hours and changes a credential, then checks the engine still matches.
+
+## Things we thought hard about
+
+- **Doctor fatigue and fairness.** Rest is checked at the offered start time, and this week's hours include the offer.
+  Offers go first to whoever can get online fastest, then to whoever has worked fewer hours and had fewer offers this
+  week. Declining is never held against anyone. A load meter shows each doctor against a soft limit of 15 consults.
+- **When the data stops coming.** "Updated" is always on screen. After 10 quiet minutes a banner appears, the top card
+  says the feed is quiet (because everything else might be stale).
+- **Patient privacy.** Synapp doesn't store or use any patient information. Matching only uses hospital, consult type,
+  stage and timers. Offers come from a fixed template, and a guard blocks consult IDs, event text and clinical words
+  from ever going out. Each role sees only its own view.
+- **Alert fatigue.** Only critical problems interrupt anyone (auto-escalating after 3 unacknowledged minutes).
+  Everything else waits in a ranked, grouped list.
+- **Fitting into Synapse.** Synapp models Sevaro's routing rules; it doesn't replace the routing engine. In production
+  the events would stream from Synapse (for example through Amazon Kinesis), offers would go through Sevaro's own
+  notifications, and sign-in through Sevaro's single sign-on.
+- **Licensing.** The kit treats state licensing as part of credentialing, so we do too. A real deployment would add a
+  per-state license check to the same eligibility table.
+
+## Next steps: taking it to the cloud
+
+Right now Synapp runs on one machine: the engine, the web app and its data all live together, which is all a demo
+needs. The next step is running it on AWS so it can take a live feed from Synapse, stay up around the clock and alert
+people even when nobody has the screen open. We've already written the infrastructure as code in `infra/` (AWS CDK in
+Python), but we haven't deployed it yet. Here's the plan.
+
 
 ![Architecture](docs/architecture.png)
 
@@ -75,54 +178,27 @@ flowchart LR
   AR --> CW[Amazon CloudWatch<br/>metrics, feed-quiet alarm] --> SNS
 ```
 
-| Service | Why it is there |
+| Service | What it would do |
 |---|---|
-| Amazon S3 (versioned, KMS) | Event data lake: `kit/`, `raw/` (every file ever added, never overwritten), `processed/`. Cheap tiered storage: `raw/` moves to Glacier after 30 days. |
-| AWS Lambda `relay-ingest` | A file dropped into `raw/` is checked and loaded with no restart. A judge can drop a file straight into the bucket. |
-| AWS App Runner (image in Amazon ECR) | Runs the engine and the web app over HTTPS. |
-| Amazon DynamoDB | Offers, approvals, replies, and the append-only audit log. A conditional write makes "first acceptance wins" safe. |
-| Amazon EventBridge Scheduler | A timer every minute: offer expiry, backup approver, no-shows, auto-escalation, stale data. |
-| Amazon SNS | Delivers the guarded offer text and internal alerts. |
-| Amazon CloudWatch | Logs, custom metrics, and an alarm when no events arrive for 10 minutes. |
-| Amazon Bedrock | Writes the two-line clinical lead summary from structured fields; a template is the fallback. Decisions are made in code. |
-| AWS KMS, Secrets Manager, IAM, CloudTrail | Encryption at rest, secrets out of code, least privilege, an audit trail of AWS calls. |
+| Amazon S3 (versioned, KMS) | The event data lake: `kit/`, `raw/` (every file ever added, never overwritten) and `processed/`. Raw files move to Glacier after 30 days. |
+| AWS Lambda `relay-ingest` | Checks and loads any file dropped into `raw/`, no restart needed. |
+| AWS App Runner (image in ECR) | Runs the engine and the web app over HTTPS. |
+| Amazon DynamoDB | Offers, approvals, replies and the audit log. A conditional write is what makes "first acceptance wins" safe. |
+| Amazon EventBridge Scheduler | A once-a-minute timer for offer expiry, the backup approver, no-shows, auto-escalation and stale data. |
+| Amazon SNS | Sends the offer text and internal alerts. |
+| Amazon CloudWatch | Logs, custom metrics and an alarm when no events arrive for 10 minutes. |
+| Amazon Bedrock | Writes the two-line summary the clinical lead sees, from structured fields. A template is the fallback, and all decisions are made in code. |
+| AWS KMS, Secrets Manager, IAM, CloudTrail | Encryption at rest, secrets kept out of code, least privilege and an audit trail of AWS calls. |
 
-Everything is defined in `infra/` with the AWS Cloud Development Kit (CDK) in Python. The same engine runs locally with
-no AWS (`RELAY_ENV=local`): a folder instead of S3 and DynamoDB, a background thread instead of EventBridge, an outbox
-instead of SNS. The demo never depends on the cloud being up.
+The engine wouldn't change. It already runs either way: locally (`RELAY_ENV=local`, what we use today) a folder stands
+in for S3 and DynamoDB, a background thread for EventBridge and an outbox for SNS. On AWS, new event files dropped into
+the bucket (`aws s3 cp new_events.csv s3://<bucket>/raw/`) would load on their own, and a CloudWatch alarm would fire
+when the feed goes quiet.
 
-## Run it locally
+### How we would deploy it
 
-```bash
-pip install -r requirements-dev.txt
-cd frontend && npm install && npm run build && cd ..
-uvicorn api.main:app --port 8080
-```
-
-Open http://localhost:8080. Or with Docker: `docker compose up --build`.
-
-For frontend development, run `npm run dev` in `frontend/` (port 5173, proxies `/api` to 8080).
-
-## Text-message offers (Twilio)
-
-By default offers appear in the Doctor phone tab (simulated). To send real texts, copy `.env.example` to `.env`
-(git-ignored), fill in your Twilio account SID, auth token and sender number, and set `RELAY_DEMO_PHONE` to your
-own phone. Restart the app. The Clinical lead's button then reads **Approve and send text**.
-
-- The text carries only hospital names, hours and the reason (the same guarded template), plus
-  "Reply 1 to accept or 2 to decline." The doctor replies **1** (accept), **2** (decline) or **ONLINE** (logged in).
-- Replies reach Synapp at `POST /api/twilio/sms`. Point your Twilio number's "A message comes in" webhook at
-  `<RELAY_PUBLIC_URL>/api/twilio/sms`; locally, expose port 8080 with a tunnel such as ngrok and set `RELAY_PUBLIC_URL`
-  to that https address. Every webhook is checked against Twilio's `X-Twilio-Signature`; unsigned requests get a 403.
-- Delivery status (queued, delivered, failed) shows on the Clinical lead's decisions and in the audit log.
-  A failed text leaves the offer open in the app and says so.
-- First acceptance wins and offers expire after 10 minutes, exactly as in the app. Replies are logged by intent only.
-- Trial accounts can only text verified numbers, and Twilio's trial docs say custom message text may be limited to
-  its own templates. If a text shows as failed with a Twilio error, check your account type first.
-
-## Deploy to AWS
-
-Full steps are in [`infra/README.md`](infra/README.md). In short, with the AWS CLI signed in and Docker running:
+The steps are written up in [`infra/README.md`](infra/README.md). The short version, with the AWS CLI signed in and
+Docker running:
 
 ```bash
 npm install -g aws-cdk
@@ -131,87 +207,49 @@ cdk bootstrap
 cdk deploy -c alert_email=you@example.com
 ```
 
-Optional sponsor features at deploy time: `-c bedrock_model=<a model ID enabled in your account>`,
-`-c teams_webhook=<Teams Workflows URL>`, `-c elevenlabs_secret_arn=<Secrets Manager ARN holding the API key>`.
+Optional extras at deploy time: `-c bedrock_model=<a model ID enabled in your account>`,
+`-c teams_webhook=<Teams Workflows URL>` and `-c elevenlabs_secret_arn=<Secrets Manager ARN holding the API key>`.
 
-**Rough monthly cost at hackathon scale** (check current AWS pricing; these are estimates): one App Runner instance
-with 1 vCPU and 2 GB is the main cost (roughly $10 a month idle, up to about $55 if busy around the clock); KMS key
-about $1; Secrets Manager under $1; CloudWatch alarm, five custom metrics and a dashboard about $5; DynamoDB on demand,
-S3, Lambda (about 43,000 timer calls a month), and SNS cost cents. About $20 to $65 a month in total.
+What we expect it to cost at hackathon scale (estimates, so check current pricing): the App Runner instance is most of it, roughly
+$10 a month idle and up to about $55 if it's busy around the clock. Add about $1 for KMS, under $1 for Secrets Manager
+and about $5 for the CloudWatch alarm, metrics and dashboard. DynamoDB, S3, Lambda and SNS come to cents. All in,
+about $20 to $65 a month.
 
-## Load new events during a demo (the live test)
+One thing to fix along the way: an uploaded dataset is kept on the server's disk, so on AWS it would only last until
+the service restarts. It should move to S3.
 
-Click **Add events** and drop the CSV (same 8 columns as `event_stream.csv`). Synapp adds it to the day it already has,
-drops duplicates (by ID and by content), places late records by when they happened, moves "now" to the latest arrival,
-and recalculates everything with no restart. The result shows what changed, the new top issue, and the fix.
+### Staying HIPAA-eligible
 
-On AWS you can also run `aws s3 cp new_events.csv s3://<bucket>/raw/`.
-
-Practice files live in `data/demo_events/` (a new stroke at Suncrest, a re-call, late and duplicate records, the 7 PM
-shift change, a quiet feed, and a file full of things we did not plan for). **Reset** returns to the kit at 6:20 PM.
-The clock controls (+1, +5, +10, Play) move the engine clock so offer expiry and no-shows can be shown.
-
-## Tests
-
-```bash
-python -m pytest        # 83 tests
-```
-
-They cover the exact snapshot match; duplicates, late events and arrival-order replay; re-calls; every split-shift
-rule with boundaries (exactly 10 hours rest and exactly 60 hours pass); the offer workflow (approval, expiry, two
-acceptances, late replies, weekly cap, retraction, no-shows, backup approver); the privacy guard; the flood guard;
-uploads without restart; bad data; every practice file; and a **no-hardcoding test** that renames every ID, moves
-every time 3 hours later, and changes a credential, then checks the engine still matches the transformed snapshot.
-
-## Going further
-
-- **Doctor fatigue and fairness.** Rest is checked at the offered start. Hours this week include the offer. Offers are
-  ranked by speed to get online, then fewer hours and fewer offers this week. Declines are never held against a doctor.
-  A load meter shows each doctor against a soft limit of 15 consults.
-- **When data stops arriving.** "Data as of" is always on screen. After 10 quiet minutes a banner appears, the top card
-  says the feed is quiet, and on AWS a CloudWatch alarm fires.
-- **Patient privacy (HIPAA).** Synapp stores and uses no patient information. Matching uses hospital, consult type,
-  stage, and timers only. Offers come from a fixed template, and a guard blocks consult IDs, event text, and clinical
-  words. Each role sees only its own view. Storage is lean: operational events only, raw files to Glacier after 30
-  days.
-- **Alert overload.** Only critical issues interrupt (auto-escalation after 3 unacknowledged minutes). Everything else
-  waits quietly in a ranked, grouped queue. CloudWatch counts alerts sent.
-- **Fitting into Synapse.** Synapp models Sevaro's routing rules; it does not replace the routing engine. In production
-  events would stream from Synapse through Amazon Kinesis into the same engine, offers would go through Sevaro's
-  notification system, and sign-in through Sevaro's single sign-on.
-- **Licensing.** The kit folds state licensing into credentialing, so Synapp treats credentialing as the gate. A real
-  deployment would add a license check per hospital state to the same eligibility table.
-
-### HIPAA-eligible services
-
-Synapp would run only on services covered by AWS's Business Associate Addendum. We tried to check AWS's live "HIPAA
-Eligible Services Reference" page on 10 October 2026, but it would not load from our build environment. A web search
-of the page confirmed Amazon EventBridge is listed, but we could not see the rest of the page. To our knowledge
-(not confirmed against the live page), S3, Lambda, App Runner, ECR, DynamoDB, EventBridge, SNS, Bedrock, CloudWatch,
-KMS, Secrets Manager, and CloudTrail are on the list. Before any production use, confirm each one at
-https://aws.amazon.com/compliance/hipaa-eligible-services-reference/ and sign the BAA in AWS Artifact.
+Synapp would only run on services covered by AWS's Business Associate Addendum. We tried to check AWS's "HIPAA Eligible
+Services Reference" page on 10 October 2026, but it wouldn't load from our build environment; a web search confirmed
+EventBridge is listed, but we couldn't see the rest. As far as we know (not confirmed against the live page), S3,
+Lambda, App Runner, ECR, DynamoDB, EventBridge, SNS, Bedrock, CloudWatch, KMS, Secrets Manager and CloudTrail are all on
+it. Before any real use, confirm each one at https://aws.amazon.com/compliance/hipaa-eligible-services-reference/ and
+sign the BAA in AWS Artifact.
 
 ## Sponsor technology
 
-| Sponsor | How Synapp uses it |
+| Sponsor | How we used it |
 |---|---|
-| **AWS** | The whole cloud architecture above, deployed with CDK. |
-| **Sevaro** | Built around Synapse terms and data. A "45-second promise at risk" flag on each hospital when routing would find nobody, protecting Sevaro's OneCall promise when the schedule breaks. |
-| **Microsoft** | Accepted shifts download as a calendar invite that opens in Outlook. Approval requests and critical alerts can post to a Microsoft Teams channel through a Workflows webhook. |
-| **ElevenLabs** | "Play offer aloud" reads the guarded offer text in a natural voice when an API key is configured (browser voice otherwise). Only the guarded text is ever sent. |
-| **The Cigna Group** | A "value of acting" estimate: what an offer costs in doctor-hours against the simulated drop in waits and unanswered calls. It compares acting with not acting, never doctors by cost. |
-| **Anakin** | Not built. A license-watch feature was planned and cut for time. |
+| **AWS** | Our planned cloud setup (see Next steps), already written as infrastructure code in `infra/` but not deployed yet. |
+| **Sevaro** | Built around Synapse's terms and data. Each hospital gets a "45-second promise at risk" flag when routing would find nobody, to protect Sevaro's OneCall promise when the schedule breaks. |
+| **Microsoft** | Accepted shifts download as a calendar invite that opens in Outlook. Approval requests and critical alerts can post to a Teams channel through a Workflows webhook. |
+| **ElevenLabs** | "Play offer aloud" reads the offer text in a natural voice when an API key is set (the browser's voice otherwise). Only the guarded offer text is ever sent. |
+| **The Cigna Group** | A "value of acting" estimate: what an offer costs in doctor-hours against the simulated drop in waits and unanswered calls. It compares acting with not acting, never one doctor against another. |
+| **Anakin** | Not built. We planned a license-watch feature and cut it for time. |
 
-## Repository layout
+## What's where
 
-- `data/kit/`: the original developer kit files, unchanged
+- `data/kit/`: the original developer kit files, untouched
 - `data/demo_events/`: practice files for the live test
-- `engine/`: the Synapp engine (pure Python, no web code)
+- `engine/`: the Synapp engine (plain Python, no web code)
 - `api/`: the FastAPI app that serves the engine and the frontend
-- `frontend/`: React, Vite, and TypeScript
-- `infra/`: AWS CDK stack and the Lambda functions
-- `tests/`: pytest suite
-- `config.yaml`: every threshold; `ASSUMPTIONS.md`: every interpretation, with the reason
-- `docs/`: API contract, architecture diagram, screenshots; `SUBMISSION.md` and `VIDEO_SCRIPT.md` at the root
+- `frontend/`: React, Vite and TypeScript
+- `infra/`: the planned AWS setup (CDK stack and Lambda functions), not deployed yet
+- `tests/`: the pytest suite
+- `config.yaml`: every threshold the engine uses
+- `ASSUMPTIONS.md`: every judgment call we made, and why
+- `docs/`: the API contract and architecture diagram
+- `SUBMISSION.md` and `VIDEO_SCRIPT.md`: our submission write-up and demo script
 
-All data in this repository is synthetic.
+All the data in this repository is synthetic.

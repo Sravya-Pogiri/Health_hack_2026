@@ -22,10 +22,10 @@ export default function Header({ state, role, setRole }: any) {
     <header className="header">
       <div className="brand">
         <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M8 27V5h9.5a7 7 0 010 14H8m9 0l8 8" fill="none" stroke="currentColor" strokeWidth="4.2"
+          <path d="M24 8.5C22.4 6.3 19.6 5 16.3 5 11.6 5 8.5 7.4 8.5 11c0 7.6 15 4.8 15 12.4 0 3.6-3.3 5.6-7.6 5.6-3.4 0-6.4-1.3-8-3.6" fill="none" stroke="currentColor" strokeWidth="4.2"
             strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="brand-name">Relay</span>
+        <span className="brand-name">Synapp</span>
         <small>for Sevaro Synapse</small>
       </div>
       <nav className="roles" aria-label="Demo role">

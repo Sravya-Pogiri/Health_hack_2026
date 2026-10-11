@@ -252,7 +252,7 @@ export function actionFor(opt: any, issue: any) {
       return { label: "Turn on", short: "Turn on", call: () => post("/api/actions/contact", { issue_id: issue.id, physician_id: opt.physician_id, summary: opt.label }), done: "Wind-down noted" };
     case "wait":
     case "incoming_join":
-      return { label: "OK, keep watching", short: "Keep watching", ack: true, call: () => post(`/api/issues/${issue.id}/ack`), done: "Acknowledged; Relay keeps watching" };
+      return { label: "OK, keep watching", short: "Keep watching", ack: true, call: () => post(`/api/issues/${issue.id}/ack`), done: "Acknowledged; Synapp keeps watching" };
     default:
       return { label: "Acknowledge", short: "Acknowledge", ack: true, call: () => post(`/api/issues/${issue.id}/ack`), done: "Acknowledged" };
   }

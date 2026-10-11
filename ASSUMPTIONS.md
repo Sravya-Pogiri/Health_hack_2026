@@ -1,6 +1,6 @@
 # Assumptions
 
-Every interpretation and default Relay uses, one line each with the reason. Numbers live in `config.yaml`.
+Every interpretation and default Synapp uses, one line each with the reason. Numbers live in `config.yaml`.
 
 ## Time and ordering
 
@@ -111,22 +111,22 @@ Every interpretation and default Relay uses, one line each with the reason. Numb
 - **Being already scheduled to work during the offer counts as an overlap.**
 - **The top recommendation targets the "nobody free now" gaps; each later projected gap gets its own eligibility table.**
 - **Eligible doctors are ranked by gap hospitals covered, then time to get online, then fewer hours this week, fewer offers this week, fewer recent declines.** Never cost, as Sevaro asked.
-- **Offers this week start at 0.** The kit has no offer history; Relay keeps its own.
+- **Offers this week start at 0.** The kit has no offer history; Synapp keeps its own.
 
 ## Offers and approvals
 
-- **The clinical lead approves a ranked plan once; Relay then offers one doctor at a time.** It moves down the list on a decline, an expiry, or a no-show. "Top two at once" is available for urgent stroke gaps under the same approval.
+- **The clinical lead approves a ranked plan once; Synapp then offers one doctor at a time.** It moves down the list on a decline, an expiry, or a no-show. "Top two at once" is available for urgent stroke gaps under the same approval.
 - **First acceptance wins, by server order.** A DynamoDB conditional write in the cloud, a lock locally. Later acceptances get "This shift is already filled. Thank you." and are logged.
 - **An accepted doctor is counted from the later of the offer start and acceptance time plus their time to get online.**
-- **No-show: not online within 10 minutes of that time (no `shift_started` event and no "I'm online" tap).** Relay moves to the next doctor on the list.
+- **No-show: not online within 10 minutes of that time (no `shift_started` event and no "I'm online" tap).** Synapp moves to the next doctor on the list.
 - **No decision on a plan within 5 minutes sends it to a backup clinical lead.** An internal alert, allowed automatically.
 - **A plan is cancelled, and its open offers retracted, when none of its gaps remain open.**
-- **Offer history starts at zero for the kit and is kept by Relay.** It drives the 3-per-week and one-open-offer rules.
+- **Offer history starts at zero for the kit and is kept by Synapp.** It drives the 3-per-week and one-open-offer rules.
 - **A doctor who accepted an offer is not offered another shift until that one ends.** They already count as coverage.
 - **"Start early" requests go through the same approval and offer flow.** Any message to a doctor outside their shift needs approval.
 - **A critical issue the coordinator has not acknowledged within 3 minutes alerts the clinical lead automatically.** Internal and low risk.
 - **Offer reasons are limited to "coverage gap now", "projected coverage gap", and "demand surge".** The guard rejects consult IDs, event descriptions, and clinical words.
-- **Coordinator reassignments are recorded and audited, not pushed into Synapse.** Relay models routing; a `physician_assigned` event confirms the change.
+- **Coordinator reassignments are recorded and audited, not pushed into Synapse.** Synapp models routing; a `physician_assigned` event confirms the change.
 
 ## Clock
 

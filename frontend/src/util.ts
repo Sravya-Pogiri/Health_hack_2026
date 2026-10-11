@@ -59,7 +59,7 @@ export function icsFor(offer: any): string {
   const stamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const where = offer.hospitals.map((h: any) => h.name).join(", ");
   return [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Relay//Split shift//EN", "BEGIN:VEVENT",
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Synapp//Split shift//EN", "BEGIN:VEVENT",
     `UID:${offer.id}@relay`, `DTSTAMP:${stamp(offer.sent_at || offer.start)}`,
     `DTSTART:${stamp(offer.start)}`, `DTEND:${stamp(offer.end)}`,
     `SUMMARY:Sevaro split shift: ${where}`, `DESCRIPTION:Tele-neurology coverage for ${where}.`,

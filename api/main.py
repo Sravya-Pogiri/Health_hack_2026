@@ -27,7 +27,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Relay", description="Tele-neurology operations: detect, decide, act.", lifespan=lifespan)
+app = FastAPI(title="Synapp", description="Tele-neurology operations: detect, decide, act.", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _service: RelayService | None = None

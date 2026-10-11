@@ -198,7 +198,7 @@ const isLead = (a: string) => a === "clinical_lead" || /clinical lead/i.test(a);
 function actorLabel(a: string, names: Record<string, string>): string {
   if (a === "coordinator") return "Coordinator";
   if (isLead(a)) return /backup/i.test(a) ? "Backup clinical lead" : "Clinical lead";
-  if (a === "system") return "Relay (automatic)";
+  if (a === "system") return "Synapp (automatic)";
   return names[a] || a;
 }
 
@@ -234,7 +234,7 @@ function sentence(r: Row, names: Record<string, string>): string {
     case "sms_reply": return `replied by text to ${r.intent === "accept" ? "accept" : r.intent === "decline" ? "decline" : "say they are online"}.`;
     case "sms_status": return `text message to ${who(r.physician_id)}: ${r.status}.`;
     case "accepted": return `accepted. Online at ${fmtTimeSec(r.online_at)}.`;
-    case "declined": return "declined. Relay moves to the next doctor on the list.";
+    case "declined": return "declined. Synapp moves to the next doctor on the list.";
     case "online": return "confirmed they are online.";
     case "accept_after_filled": return "tried to accept after the shift was filled. Told it is already filled.";
     case "late_accept_rejected": return "replied after the offer expired. Not accepted.";

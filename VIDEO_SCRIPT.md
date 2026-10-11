@@ -17,7 +17,7 @@ Today, someone has to notice all that and fix it by phone."
 
 *Screen: hospital strip, then the doctor list.*
 
-"Relay is an add-on to Synapse that goes from seeing to acting: detect, decide, act. It rebuilds the real state from
+"Synapp is an add-on to Synapse that goes from seeing to acting: detect, decide, act. It rebuilds the real state from
 the event stream in the order things happened, so late and duplicate records cannot fool it, and it matches Sevaro's
 reference snapshot exactly. It works out who is really free from calls, video, and camera signals, not from
 self-reported status. And it never touches patient information."
@@ -30,7 +30,7 @@ self-reported status. And it never touches patient information."
    video and we never interrupt that, and nobody scheduled starts within the hour. So: a split shift."
 3. *Scroll to the eligibility table.* "Every off-duty doctor, every rule. Dr. Okafor is the only one who qualifies.
    Dr. Alvarez is not approved at these hospitals, Dr. Cho's offer would overlap her 7 PM shift, Dr. Menon would go over
-   60 hours. If nobody qualified, Relay would escalate, never bend a rule."
+   60 hours. If nobody qualified, Synapp would escalate, never bend a rule."
 4. *Run the flood guard simulation.* "A new doctor starts with zero consults, so routing would send her every call at
    every hospital. The flood guard keeps her on the hospitals that need help, and here is what happens to everyone
    else's calls."
@@ -41,7 +41,7 @@ self-reported status. And it never touches patient information."
 7. Switch to **Coordinator**. "Coverage updates: the Northfield gap at 8 PM is closed by the same offer, and Oak Valley
    now says Dr. Okafor joins at 6:35."
 8. *The live test.* Click **Add events** and drop `01_new_stroke_suncrest.csv`. "This is what the judges will do: a new
-   file, appended to the day, no restart. Relay drops duplicates, places late records, and tells us right away: a new
+   file, appended to the day, no restart. Synapp drops duplicates, places late records, and tells us right away: a new
    stroke consult at Suncrest, nobody free, here is the fix."
 
 ## 3:30 to 4:15 · Technology
@@ -61,8 +61,8 @@ Bedrock writes the clinical lead's summary. All of it is infrastructure as code 
 
 *Screen: Insights tab, then the audit log.*
 
-"Relay is built to be deployable. It stores no patient information. A person approves every message to an off-duty
+"Synapp is built to be deployable. It stores no patient information. A person approves every message to an off-duty
 doctor, and every decision is in the audit log. It models Sevaro's routing instead of replacing it, so it plugs into
 Synapse; in production the events would stream through Amazon Kinesis into the same engine. And looking back, the
-replay shows Relay would have flagged the Suncrest surge at 5:55 PM, 25 minutes before anyone had to scramble. Relay:
+replay shows Synapp would have flagged the Suncrest surge at 5:55 PM, 25 minutes before anyone had to scramble. Synapp:
 from seeing the gap to a doctor covering it."

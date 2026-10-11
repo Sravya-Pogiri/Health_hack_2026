@@ -1,7 +1,7 @@
 """Standouts: replay scoreboard, time to doctor, credentialing impact, and handoff cards.
 
 The scoreboard reruns the whole engine every 5 minutes of the day using only what had arrived by then,
-and reports when Relay would first have flagged each problem. It reports detection lead time and when
+and reports when Synapp would first have flagged each problem. It reports detection lead time and when
 help could have arrived. It never claims patient outcomes.
 """
 from __future__ import annotations
@@ -83,11 +83,11 @@ def scoreboard(ds, now, step_minutes: int = 5) -> dict:
         items.append({"kind": "consult", "consult_id": cid, "first_flagged": t0.isoformat(),
                       "critical_at": crit.isoformat() if crit else None, "text": text})
     for hid, (t0, count, p90) in sorted(first_surge.items(), key=lambda kv: kv[1][0])[:1]:
-        headlines.append(f"Relay would have flagged the {names.get(hid, hid)} surge at {fmt_clock(t0)}, "
+        headlines.append(f"Synapp would have flagged the {names.get(hid, hid)} surge at {fmt_clock(t0)}, "
                          f"{minutes_between(t0, now)} minutes before {fmt_clock(now)}.")
     if first_rec:
         t0, name, online = first_rec
-        headlines.append(f"Relay would have recommended {name} at {fmt_clock(t0)}; with approval they could have been "
+        headlines.append(f"Synapp would have recommended {name} at {fmt_clock(t0)}; with approval they could have been "
                          f"online by about {fmt_clock(max(online, t0 + timedelta(minutes=15)))}.")
     gaps = [i for i in items if i["kind"] == "gap"]
     if gaps:
@@ -99,7 +99,7 @@ def scoreboard(ds, now, step_minutes: int = 5) -> dict:
                          f"earlier ({len(leads)} consults).")
     return {"step_minutes": step_minutes, "from": start.isoformat(), "to": now.isoformat(), "headlines": headlines,
             "items": items,
-            "note": "Detection lead time only. Relay does not claim patient outcomes from a replay."}
+            "note": "Detection lead time only. Synapp does not claim patient outcomes from a replay."}
 
 
 def datetime_or(s):

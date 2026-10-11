@@ -74,7 +74,7 @@ class SnsNotifier(Notifier):
         item = super().internal(text, audience)
         if self.alerts_topic:
             try:
-                self.sns.publish(TopicArn=self.alerts_topic, Message=text, Subject=f"Relay alert for {audience}")
+                self.sns.publish(TopicArn=self.alerts_topic, Message=text, Subject=f"Synapp alert for {audience}")
             except Exception as exc:
                 log.warning("SNS alert publish failed: %s", exc)
         if self.teams_webhook:

@@ -18,7 +18,7 @@ const HEADINGS: Record<Role, [string, string]> = {
   coordinator: ["Operations overview", "Network coverage and next actions"],
   lead: ["Clinical lead", "Decisions waiting on you and stroke care at risk"],
   phone: ["Doctor phone", "What the doctor sees when an offer arrives"],
-  insights: ["Insights", "What Relay would have caught today, and why"],
+  insights: ["Insights", "What Synapp would have caught today, and why"],
   audit: ["Audit log", "Every proposal, approval, message and reply"],
 };
 
@@ -88,7 +88,7 @@ function Main() {
   };
 
   if (!state) {
-    return <div className="empty">{error ? `Cannot reach the Relay API: ${error}` : "Loading Relay..."}</div>;
+    return <div className="empty">{error ? `Cannot reach the Synapp API: ${error}` : "Loading Synapp..."}</div>;
   }
 
   return (
@@ -100,7 +100,7 @@ function Main() {
             <h1>{HEADINGS[role][0]}</h1>
             <p>{HEADINGS[role][1]}</p>
           </div>
-          <span className="demo-badge" title="All data is synthetic. Relay uses no patient information.">
+          <span className="demo-badge" title="All data is synthetic. Synapp uses no patient information.">
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"
               strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6M10 3v6l-5.5 9.5A1.7 1.7 0 006 21h12a1.7 1.7 0 001.5-2.5L14 9V3M7.5 15h9" /></svg>
             Synthetic demo
@@ -114,7 +114,7 @@ function Main() {
         {role === "audit" && <AuditView state={state} />}
         <SimBar state={state} act={act} />
         <div className="footer">
-          All data is synthetic. Relay uses no patient information: matching uses hospital, consult type, stage, and
+          All data is synthetic. Synapp uses no patient information: matching uses hospital, consult type, stage, and
           timers only. Role switcher is for the demo; production would use sign-in.
         </div>
       </div>

@@ -33,7 +33,7 @@ export default function AddEvents({ onClose, act, state }: any) {
         <button className="btn small close" onClick={onClose}>Close</button>
         <h2 style={{ marginTop: 0 }}>Add events to the day</h2>
         <p className="muted small">
-          Same 8 columns as event_stream.csv. Relay adds them to the day it already has, drops duplicates, places late
+          Same 8 columns as event_stream.csv. Synapp adds them to the day it already has, drops duplicates, places late
           records by when they happened, and recalculates everything. No restart.
         </p>
         {report && <Report r={report} />}

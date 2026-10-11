@@ -10,7 +10,7 @@ Sevaro, Challenge 2: Tele-Neurology Operations Command Center: From Visibility t
 ## 2. What challenge did you try to solve? (text description of the solution)
 
 Sevaro's live view shows who looks busy, but fixing a gap still depends on someone noticing, working out by hand who is
-credentialed and eligible, and calling them while a stroke patient waits. Relay closes that loop. It rebuilds the true
+credentialed and eligible, and calling them while a stroke patient waits. Synapp closes that loop. It rebuilds the true
 state of the network from the Synapse event stream in the order things happened, finds what needs attention now and in
 the next 90 minutes, and ranks it with a plain reason. For the top problem it recommends the least disruptive fix that
 works, checks every off-duty doctor against every split-shift rule, and shows why each one is or is not eligible. The
@@ -19,7 +19,7 @@ acceptance wins, coverage updates, and every step is logged. New event files loa
 
 ## 3. Overview of the project: what we did, how, and why
 
-**What.** Relay is an add-on to Sevaro's Synapse platform with three simple views: a coordinator's ranked action queue,
+**What.** Synapp is an add-on to Sevaro's Synapse platform with three simple views: a coordinator's ranked action queue,
 a clinical lead's approval screen, and a doctor's phone offer. On the kit data at 6:20 PM it finds a stroke consult at
 Oak Valley that nobody approved there can take, a Harbor stroke consult assigned to a doctor who just went unavailable,
 a surge at Suncrest (5 consults against a normal 1), and coverage gaps when shifts end at 8 and 9 PM. Of six off-duty
@@ -35,12 +35,12 @@ start early, offer a split shift, escalate. A routing model of Sevaro's five rul
 in the kit, and a flood guard keeps a newly joined doctor from being sent every call at every hospital.
 
 **Why.** Time is brain. Sevaro told us the hard parts are having someone credentialed and available to take the call,
-prioritizing in real time, and respecting patient privacy, and that simple beats busy. So Relay ranks instead of
+prioritizing in real time, and respecting patient privacy, and that simple beats busy. So Synapp ranks instead of
 displaying, explains every decision, keeps a person in charge of every message to an off-duty doctor, and stores no
 patient information at all.
 
-**Beyond the brief.** A replay scoreboard reruns the day every 5 minutes on what had arrived by then ("Relay would
-have flagged the Suncrest surge at 5:55 PM, 25 minutes before 6:20 PM"). Relay also shows which credentialing changes
+**Beyond the brief.** A replay scoreboard reruns the day every 5 minutes on what had arrived by then ("Synapp would
+have flagged the Suncrest surge at 5:55 PM, 25 minutes before 6:20 PM"). Synapp also shows which credentialing changes
 would have prevented today's problems, builds handoff cards for doctors leaving with open consults, and estimates the
 value of acting versus not acting. It never ranks doctors by cost.
 

@@ -225,7 +225,7 @@ function Escalation({ a, issues, act }: any) {
       </div>
       <h3>{issue ? `${issue.where?.hospital_name ? shortHospital(issue.where.hospital_name) + ": " : ""}${issue.title}` : "Escalation"}</h3>
       <p className="esc-text">{a.summary}</p>
-      {issue?.what_to_do?.primary?.why && <div className="muted small">Relay: {issue.what_to_do.primary.why}</div>}
+      {issue?.what_to_do?.primary?.why && <div className="muted small">Synapp: {issue.what_to_do.primary.why}</div>}
       <div className="buttons">
         <button className="btn primary" onClick={() => act(() => post(`/api/issues/${a.issue_id}/ack`, { by: BY }), "Taken. Logged with your name.")}>
           I'm handling it

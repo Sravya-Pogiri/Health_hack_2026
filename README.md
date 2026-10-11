@@ -1,8 +1,8 @@
-# Relay
+# Synapp
 
-**Sevaro can already see problems. Relay gets a doctor covering the gap before a stroke patient waits.**
+**Sevaro can already see problems. Synapp gets a doctor covering the gap before a stroke patient waits.**
 
-Relay is our entry for Rutgers Health Hack 2026, Sevaro track, Challenge 2: "Tele-Neurology Operations Command Center:
+Synapp is our entry for Rutgers Health Hack 2026, Sevaro track, Challenge 2: "Tele-Neurology Operations Command Center:
 From Visibility to Intervention." It sits next to Sevaro's Synapse platform. It rebuilds the true state of the network
 from the event stream, finds what needs attention now and in the next 90 minutes, recommends the fix, gets a person to
 approve it, sends the offer, and closes the loop.
@@ -17,9 +17,9 @@ hour when its normal busy level is 1. A stroke consult at Harbor Regional is ass
 "Temporarily Unavailable". Two doctors leave at 7 PM with unsigned notes, and four more leave at 8 PM. Today, fixing
 this depends on someone noticing, working out by hand who is credentialed and eligible, and calling them.
 
-## What Relay does
+## What Synapp does
 
-**Detect.** Relay replays every event in the order it happened (not the order it arrived), drops duplicates, and
+**Detect.** Synapp replays every event in the order it happened (not the order it arrived), drops duplicates, and
 places late records where they belong. It infers who is really free from calls, video, camera, and the desktop agent,
 never from self-reported status alone. It checks every consult against Sevaro's time standards, compares each hospital
 with its own normal level to spot surges, and projects staffed coverage every 15 minutes past the 7, 8, and 9 PM shift
@@ -30,9 +30,9 @@ to do (with who approves and why this fix over the others). Cards are ranked by 
 first, nobody working on it first, re-calls move up, longer wait first. The fix comes from a ladder, least disruptive
 first: reassign, wait for a doctor about to free up, pull someone off lower-priority work (never a stroke call), ask a
 scheduled doctor to start early, offer a split shift, escalate. Every off-duty doctor is checked against every
-split-shift rule, with the numbers. If nobody qualifies, Relay escalates. It never bends a rule.
+split-shift rule, with the numbers. If nobody qualifies, Synapp escalates. It never bends a rule.
 
-**Act.** The coordinator proposes; the clinical lead on duty approves in one step; Relay sends the offer to the
+**Act.** The coordinator proposes; the clinical lead on duty approves in one step; Synapp sends the offer to the
 doctor's phone with hospital names, hours, start time, and why them, and nothing else. Offers expire after 10 minutes.
 The first acceptance wins; a second gets "This shift is already filled". When someone accepts, projected coverage
 updates, routing keeps the new doctor on the hospitals that need help (the flood guard), and every other open offer is
@@ -55,7 +55,7 @@ retracted. Every step lands in an append-only audit log.
 | Ranked queue, hospital coverage, true availability | Approve or reject in one step, with a plain summary | The offer, a 10-minute countdown, Accept or Decline |
 | ![](docs/screenshots/issue-drawer.png) | ![](docs/screenshots/clinical-lead.png) | ![](docs/screenshots/doctor-phone.png) |
 
-The Insights tab has the replay scoreboard ("Relay would have flagged the Suncrest surge at 5:55 PM, 25 minutes before
+The Insights tab has the replay scoreboard ("Synapp would have flagged the Suncrest surge at 5:55 PM, 25 minutes before
 6:20 PM"), credentialing impact, handoff cards for doctors near shift end, and time to doctor per hospital.
 
 ## Architecture
@@ -66,7 +66,7 @@ The Insights tab has the replay scoreboard ("Relay would have flagged the Suncre
 flowchart LR
   A[Synapse events / judge's file] --> S3[(Amazon S3 data lake<br/>kit, raw, processed)]
   S3 -- object created --> L[AWS Lambda relay-ingest]
-  L -- reload --> AR[AWS App Runner<br/>Relay engine + web app]
+  L -- reload --> AR[AWS App Runner<br/>Synapp engine + web app]
   AR <--> S3
   AR --> D[(Amazon DynamoDB<br/>actions, audit)]
   AR --> SNS[Amazon SNS<br/>offers, alerts]
@@ -111,7 +111,7 @@ own phone. Restart the app. The Clinical lead's button then reads **Approve and 
 
 - The text carries only hospital names, hours and the reason (the same guarded template), plus
   "Reply 1 to accept or 2 to decline." The doctor replies **1** (accept), **2** (decline) or **ONLINE** (logged in).
-- Replies reach Relay at `POST /api/twilio/sms`. Point your Twilio number's "A message comes in" webhook at
+- Replies reach Synapp at `POST /api/twilio/sms`. Point your Twilio number's "A message comes in" webhook at
   `<RELAY_PUBLIC_URL>/api/twilio/sms`; locally, expose port 8080 with a tunnel such as ngrok and set `RELAY_PUBLIC_URL`
   to that https address. Every webhook is checked against Twilio's `X-Twilio-Signature`; unsigned requests get a 403.
 - Delivery status (queued, delivered, failed) shows on the Clinical lead's decisions and in the audit log.
@@ -141,7 +141,7 @@ S3, Lambda (about 43,000 timer calls a month), and SNS cost cents. About $20 to 
 
 ## Load new events during a demo (the live test)
 
-Click **Add events** and drop the CSV (same 8 columns as `event_stream.csv`). Relay adds it to the day it already has,
+Click **Add events** and drop the CSV (same 8 columns as `event_stream.csv`). Synapp adds it to the day it already has,
 drops duplicates (by ID and by content), places late records by when they happened, moves "now" to the latest arrival,
 and recalculates everything with no restart. The result shows what changed, the new top issue, and the fix.
 
@@ -170,21 +170,21 @@ every time 3 hours later, and changes a credential, then checks the engine still
   A load meter shows each doctor against a soft limit of 15 consults.
 - **When data stops arriving.** "Data as of" is always on screen. After 10 quiet minutes a banner appears, the top card
   says the feed is quiet, and on AWS a CloudWatch alarm fires.
-- **Patient privacy (HIPAA).** Relay stores and uses no patient information. Matching uses hospital, consult type,
+- **Patient privacy (HIPAA).** Synapp stores and uses no patient information. Matching uses hospital, consult type,
   stage, and timers only. Offers come from a fixed template, and a guard blocks consult IDs, event text, and clinical
   words. Each role sees only its own view. Storage is lean: operational events only, raw files to Glacier after 30
   days.
 - **Alert overload.** Only critical issues interrupt (auto-escalation after 3 unacknowledged minutes). Everything else
   waits quietly in a ranked, grouped queue. CloudWatch counts alerts sent.
-- **Fitting into Synapse.** Relay models Sevaro's routing rules; it does not replace the routing engine. In production
+- **Fitting into Synapse.** Synapp models Sevaro's routing rules; it does not replace the routing engine. In production
   events would stream from Synapse through Amazon Kinesis into the same engine, offers would go through Sevaro's
   notification system, and sign-in through Sevaro's single sign-on.
-- **Licensing.** The kit folds state licensing into credentialing, so Relay treats credentialing as the gate. A real
+- **Licensing.** The kit folds state licensing into credentialing, so Synapp treats credentialing as the gate. A real
   deployment would add a license check per hospital state to the same eligibility table.
 
 ### HIPAA-eligible services
 
-Relay would run only on services covered by AWS's Business Associate Addendum. We tried to check AWS's live "HIPAA
+Synapp would run only on services covered by AWS's Business Associate Addendum. We tried to check AWS's live "HIPAA
 Eligible Services Reference" page on 10 October 2026, but it would not load from our build environment. A web search
 of the page confirmed Amazon EventBridge is listed, but we could not see the rest of the page. To our knowledge
 (not confirmed against the live page), S3, Lambda, App Runner, ECR, DynamoDB, EventBridge, SNS, Bedrock, CloudWatch,
@@ -193,7 +193,7 @@ https://aws.amazon.com/compliance/hipaa-eligible-services-reference/ and sign th
 
 ## Sponsor technology
 
-| Sponsor | How Relay uses it |
+| Sponsor | How Synapp uses it |
 |---|---|
 | **AWS** | The whole cloud architecture above, deployed with CDK. |
 | **Sevaro** | Built around Synapse terms and data. A "45-second promise at risk" flag on each hospital when routing would find nobody, protecting Sevaro's OneCall promise when the schedule breaks. |
@@ -206,7 +206,7 @@ https://aws.amazon.com/compliance/hipaa-eligible-services-reference/ and sign th
 
 - `data/kit/`: the original developer kit files, unchanged
 - `data/demo_events/`: practice files for the live test
-- `engine/`: the Relay engine (pure Python, no web code)
+- `engine/`: the Synapp engine (pure Python, no web code)
 - `api/`: the FastAPI app that serves the engine and the frontend
 - `frontend/`: React, Vite, and TypeScript
 - `infra/`: AWS CDK stack and the Lambda functions

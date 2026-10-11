@@ -1,6 +1,6 @@
-# Deploying Relay to AWS
+# Deploying Synapp to AWS
 
-Relay runs the same engine locally and on AWS. Set `RELAY_ENV=aws` and the storage switches from a local folder to
+Synapp runs the same engine locally and on AWS. Set `RELAY_ENV=aws` and the storage switches from a local folder to
 Amazon S3 and Amazon DynamoDB, and messages go through Amazon SNS. The demo never depends on the cloud: if AWS has a
 problem, run `docker compose up --build` locally.
 

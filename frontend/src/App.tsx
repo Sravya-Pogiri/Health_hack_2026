@@ -27,8 +27,19 @@ export default function App() {
   return <Main />;
 }
 
+type Theme = "light" | "dark";
+
+function initialTheme(): Theme {
+  try {
+    const saved = localStorage.getItem("relay-theme");
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {}
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 function Main() {
   const [role, setRole] = useState<Role>(roleFromHash());
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [state, setState] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -47,6 +58,13 @@ function Main() {
     const id = setInterval(refresh, 2000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("relay-theme", theme);
+    } catch {}
+  }, [theme]);
 
   useEffect(() => {
     const onHash = () => setRole(roleFromHash());
@@ -88,7 +106,8 @@ function Main() {
 
   return (
     <div className="app">
-      <Sidebar state={state} role={role} setRole={changeRole} />
+      <Sidebar state={state} role={role} setRole={changeRole} theme={theme}
+        toggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")} />
       <div className="main">
         <Topbar state={state} role={role} act={act} />
         <main className="page" key={role}>

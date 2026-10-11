@@ -21,7 +21,7 @@ const ROLE_INFO: Record<Role, { icon: string; title: string; sub: string }> = {
   audit: { icon: "audit", title: "Audit log", sub: "Append-only record of every proposal, approval and reply" },
 };
 
-export function Sidebar({ state, role, setRole }: any) {
+export function Sidebar({ state, role, setRole, theme, toggleTheme }: any) {
   const [health, setHealth] = useState(false);
   const dh = state.data_health;
   const pending = state.pending_approvals?.length || 0;
@@ -66,6 +66,10 @@ export function Sidebar({ state, role, setRole }: any) {
             <b>{dh.stale ? "Feed quiet" : "Feed live"}</b>
             <span>Data as of {fmtTime(dh.data_as_of)}</span>
           </span>
+        </button>
+        <button className="theme-toggle" onClick={toggleTheme} aria-label="Switch light or dark theme">
+          <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+          <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
         </button>
         <p className="sidebar-note">
           <Icon name="shield" size={14} />

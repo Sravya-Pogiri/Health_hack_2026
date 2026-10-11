@@ -710,3 +710,16 @@ table.t.boxed .findings ul { margin: 6px 0 0; padding-left: 16px; }
 .fix-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .fix { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; font-size: 12.5px; }
 .fix.stroke { background: var(--critical-soft); border-color: var(--critical-line); }
+
+/* Tiles lift a little on hover */
+.upcoming-item, .pulse-tile, .iv-row, .card .risk-row, .handoff, .card .approval {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.upcoming-item:hover, .pulse-tile:hover, .iv-row:hover, .card .risk-row:hover, .handoff:hover, .card .approval:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(15, 29, 58, 0.10);
+}
+@media (prefers-reduced-motion: reduce) {
+  .upcoming-item, .pulse-tile, .iv-row, .card .risk-row, .handoff, .card .approval { transition: none; }
+  .upcoming-item:hover, .pulse-tile:hover, .iv-row:hover, .card .risk-row:hover, .handoff:hover, .card .approval:hover { transform: none; }
+}

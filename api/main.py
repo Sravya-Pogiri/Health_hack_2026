@@ -266,6 +266,8 @@ def load_demo_event(name: str):
     path = (DEMO_DIR / name).resolve()
     if DEMO_DIR.resolve() not in path.parents or not path.is_file():
         raise HTTPException(404, "No such practice file.")
+    if svc().dataset_info()["source"] != "sample":
+        raise HTTPException(409, "Practice files are written for the sample data. Go back to the sample data to use them.")
     return svc().upload(path.read_text(encoding="utf-8-sig"), name)
 
 

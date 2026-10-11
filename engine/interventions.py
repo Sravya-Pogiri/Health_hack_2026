@@ -103,7 +103,13 @@ def opt_reassign(ctx: Context, need: Need) -> Option:
     if need.consult and need.consult.physician_id:
         exclude.add(need.consult.physician_id)
     cands = [c for c in candidates_from_world(ctx.ds, ctx.world) if c.id not in exclude]
-    result = route_core(cands, need.hospital_id, ctx.ds.cfg, ctx.hospital(need.hospital_id))
+    # Routing trusts self-reported status, but a fix should go to someone we can see is there: prefer doctors
+    # whose desktop agent is reporting, and fall back to the routing choice only if nobody else is free.
+    unverified = {p.id for p in ctx.world.physicians.values() if not p.agent_online}
+    result = route_core([c for c in cands if c.id not in unverified], need.hospital_id, ctx.ds.cfg,
+                        ctx.hospital(need.hospital_id))
+    if not result.chosen:
+        result = route_core(cands, need.hospital_id, ctx.ds.cfg, ctx.hospital(need.hospital_id))
     what = need.consult.consult_id if need.consult else "the next consult"
     if not result.chosen:
         removed = [r for step in result.steps if step["rule"] in (1, 2) for r in step["removed"]

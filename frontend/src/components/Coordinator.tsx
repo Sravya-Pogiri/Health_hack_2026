@@ -258,11 +258,15 @@ export function actionFor(opt: any, issue: any) {
   }
 }
 
+const isAcked = (g: any) => !!(g.issues.find((i: any) => i.id === g.primary_issue_id) || g.issues[0])?.acknowledged_at;
+
 function Interventions({ state, act, open }: any) {
-  const groups = state.issues;
-  const [expanded, setExpanded] = useState<string | null>(groups[0]?.id ?? null);
+  // Acknowledged items move below the rest, so the next thing to act on is always on top and open.
+  const groups = [...state.issues.filter((g: any) => !isAcked(g)), ...state.issues.filter(isAcked)];
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [all, setAll] = useState(false);
-  const current = groups.some((g: any) => g.id === expanded) ? expanded : null;
+  const fallback = groups[0] && !isAcked(groups[0]) ? groups[0].id : null;
+  const current = expanded === "" ? null : groups.some((g: any) => g.id === expanded) ? expanded : fallback;
   const shown = all ? groups : groups.slice(0, INTERVENTIONS_SHOWN);
 
   return (
@@ -275,7 +279,8 @@ function Interventions({ state, act, open }: any) {
       <div className="iv-list">
         {shown.map((g: any) => (
           <Intervention key={g.id} group={g} state={state} act={act} open={open}
-            expanded={current === g.id} toggle={() => setExpanded(current === g.id ? null : g.id)} />
+            expanded={current === g.id} toggle={() => setExpanded(current === g.id ? "" : g.id)}
+            onAck={() => setExpanded(null)} />
         ))}
       </div>
       {groups.length > INTERVENTIONS_SHOWN && (
@@ -287,7 +292,7 @@ function Interventions({ state, act, open }: any) {
   );
 }
 
-function Intervention({ group, state, act, open, expanded, toggle }: any) {
+function Intervention({ group, state, act, open, expanded, toggle, onAck }: any) {
   const issue = group.issues.find((i: any) => i.id === group.primary_issue_id) || group.issues[0];
   const plan = issue.what_to_do;
   const primary = plan?.primary;
@@ -346,14 +351,15 @@ function Intervention({ group, state, act, open, expanded, toggle }: any) {
           <span className="chip accent big" title={`Plan ${linkedPlan.id}`}>{capitalize(planStatus(linkedPlan))}</span>
         ) : (
           action && (
-            <button className="btn primary big" title={(action as any).hint} onClick={() => act(action.call, action.done)}>
+            <button className="btn primary big" title={(action as any).hint}
+              onClick={async () => { await act(action.call, action.done); if ((action as any).ack) onAck(); }}>
               {action.label}
             </button>
           )
         )}
         <button className="link underline" onClick={() => open(issue.id)}>View reasoning</button>
         {!issue.acknowledged_at && !(action as any)?.ack && (
-          <button className="link muted-link" onClick={() => act(() => post(`/api/issues/${issue.id}/ack`), "Acknowledged")}>Acknowledge</button>
+          <button className="link muted-link" onClick={async () => { await act(() => post(`/api/issues/${issue.id}/ack`), "Acknowledged"); onAck(); }}>Acknowledge</button>
         )}
       </div>
       {plan?.also_now?.length > 0 && (

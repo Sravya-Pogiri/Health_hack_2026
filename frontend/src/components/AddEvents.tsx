@@ -94,8 +94,11 @@ export default function AddEvents({ onClose, act, state }: any) {
 
         {tab === "demo" && (
           <div>
-            {demo.length === 0 && <p className="muted">No practice files found.</p>}
-            {demo.map((d) => (
+            {state.dataset?.source === "uploaded" && (
+              <p className="muted">Practice files are written for the sample data, so they are off while an uploaded dataset is in use.</p>
+            )}
+            {state.dataset?.source !== "uploaded" && demo.length === 0 && <p className="muted">No practice files found.</p>}
+            {state.dataset?.source !== "uploaded" && demo.map((d) => (
               <div key={d.name} className="inbox-item" style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div style={{ flex: 1 }}><b>{d.name}</b><div className="muted small">{d.description}</div></div>
                 <button className="btn small primary" onClick={async () => { const r = await act(() => post(`/api/demo-events/${d.name}`)); if (r) setReport(r); }}>

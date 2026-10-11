@@ -752,3 +752,15 @@ table.t.boxed .findings ul { margin: 6px 0 0; padding-left: 16px; }
 .ds-result .btn { justify-self: start; }
 .ds-warn { color: var(--warning); font-size: 13px; padding-left: 18px; }
 @media (max-width: 1100px) { .header-right { gap: 10px; } .ds-btn { padding: 5px 9px; } }
+
+/* Wide tables scroll inside their card instead of widening the page */
+.overview > *, .ov-grid > * { min-width: 0; }
+
+/* Phone-width fixes */
+@media (max-width: 760px) {
+  .phone { width: min(340px, 100%); }
+  .phone-stage { padding-left: 8px; padding-right: 8px; }
+  .cov-table td.now { white-space: nowrap; }
+  .cov-table td.now b, .cov-table td.now small { display: inline; }
+}
+@media (max-width: 760px) { .card-body { overflow-x: auto; } }

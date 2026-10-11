@@ -68,7 +68,7 @@ value of acting versus not acting. It never ranks doctors by cost.
 Local (no AWS needed):
 
 1. Install Python 3.11 or later and Node.js 18 or later.
-2. `git clone <repository URL>` and `cd` into it.
+2. `git clone https://github.com/Sravya-Pogiri/Health_hack_2026.git` and `cd Health_hack_2026`.
 3. `pip install -r requirements-dev.txt`
 4. `cd frontend && npm install && npm run build && cd ..`
 5. `uvicorn api.main:app --port 8080`, then open http://localhost:8080

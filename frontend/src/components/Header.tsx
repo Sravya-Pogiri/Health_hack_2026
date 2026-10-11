@@ -21,12 +21,8 @@ export default function Header({ state, role, setRole }: any) {
   return (
     <header className="header">
       <div className="brand">
-        <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M24 8.5C22.4 6.3 19.6 5 16.3 5 11.6 5 8.5 7.4 8.5 11c0 7.6 15 4.8 15 12.4 0 3.6-3.3 5.6-7.6 5.6-3.4 0-6.4-1.3-8-3.6" fill="none" stroke="currentColor" strokeWidth="4.2"
-            strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="brand-name">Synapp</span>
-        <small>for Sevaro Synapse</small>
+        <SynappMark />
+        <span className="brand-name">Syn<span className="brand-accent">app</span></span>
       </div>
       <nav className="roles" aria-label="Demo role">
         {ROLES.map(([r, label]) => (
@@ -47,6 +43,26 @@ export default function Header({ state, role, setRole }: any) {
       </div>
       {health && <HealthPanel dh={dh} onClose={() => setHealth(false)} />}
     </header>
+  );
+}
+
+// The logo: an S drawn as a line joining two nodes, for connecting a doctor to a hospital.
+const S_PATH = "M21.6 10.2C20.3 8.6 18.3 7.8 16 7.8c-3.2 0-5.4 1.7-5.4 4.1 0 5.6 10.8 3.4 10.8 8.6 0 2.4-2.3 4-5.5 4-2.4 0-4.4-.9-5.6-2.5";
+
+function SynappMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="synapp-mark" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#17a2a6" />
+          <stop offset="1" stopColor="#0b5f63" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#synapp-mark)" />
+      <path d={S_PATH} fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+      <circle cx="21.6" cy="10.2" r="2.5" fill="#fff" /><circle cx="21.6" cy="10.2" r="1" fill="#0e7c80" />
+      <circle cx="10.3" cy="22" r="2.5" fill="#fff" /><circle cx="10.3" cy="22" r="1" fill="#0e7c80" />
+    </svg>
   );
 }
 

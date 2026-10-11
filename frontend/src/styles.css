@@ -43,7 +43,8 @@ a { color: var(--accent); }
   padding: 8px 28px; background: var(--panel); border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand-mark { width: 24px; height: 24px; color: var(--accent); flex: none; }
+.brand-mark { width: 32px; height: 32px; flex: none; filter: drop-shadow(0 2px 4px rgba(14, 124, 128, 0.25)); }
+.brand-accent { color: var(--accent); }
 .brand-name { font-weight: 800; font-size: 21px; letter-spacing: -0.02em; color: var(--ink); }
 .brand small { font-size: 13px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
 .roles { display: flex; gap: 6px; }

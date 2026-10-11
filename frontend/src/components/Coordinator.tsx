@@ -131,7 +131,7 @@ function CoverageTable({ state }: any) {
     <section className="card cov-card">
       <div className="card-head">
         <h2>Hospital coverage</h2>
-        <p>On shift / required <span className="sep">•</span> Free doctors shown separately</p>
+        <p>On shift / required <span className="sep">•</span> Free doctors shown separately <span className="sep">•</span> <span className="hint-click">Click a hospital for details</span></p>
       </div>
       <div className="cov-scroll">
         <table className="cov-table">
@@ -173,8 +173,8 @@ function CoverageRow({ h, flag, cols, series, names }: any) {
   const shortNow = h.staffed_now < h.required_now;
   return (
     <Fragment>
-      <tr className="cov-row" tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={onActivate(toggle)}
-        title="Click to see who is free">
+      <tr className={`cov-row ${open ? "open" : ""}`} tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={onActivate(toggle)}
+        title={open ? "Click to hide details" : "Click to see who is free, busy and next up"}>
         <th scope="row">
           <span className="cv-name" title={h.name}>
             {flag && <span className="sdot" style={{ background: SEVERITY_COLOR[flag.severity] }} />}
@@ -184,6 +184,7 @@ function CoverageRow({ h, flag, cols, series, names }: any) {
                 Surge
               </span>
             )}
+            <span className="cv-chev"><Chevron open={open} /></span>
           </span>
         </th>
         <td className={`now ${shortNow ? "short" : ""}`}>

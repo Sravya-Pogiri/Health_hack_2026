@@ -552,3 +552,14 @@ input.i, select.i, textarea.i { width: 100%; padding: 7px 9px; border: 1px solid
   .iv-open { padding: 14px 14px 16px; }
   .iv-actions { gap: 16px; }
 }
+
+/* Coverage rows are clickable: chevron, hover highlight, open state */
+.cv-chev { display: inline-flex; margin-left: auto; padding-left: 6px; color: var(--faint); transition: color 0.15s; }
+.cov-row > * { transition: background 0.12s; }
+.cov-row:hover > th, .cov-row:hover > td:not(.short):not(.now), .cov-row:focus-visible > th { background: var(--hover); }
+.cov-row:hover > td.now { background: #d2ebe8; }
+.cov-row:hover .cv-chev, .cov-row.open .cv-chev { color: var(--accent); }
+.cov-row:hover .cv-name .n { color: var(--accent); }
+.cov-row.open > th { box-shadow: inset 3px 0 0 var(--accent); }
+.cov-row.open .cv-name .n { color: var(--accent); }
+.hint-click { color: var(--accent); }
